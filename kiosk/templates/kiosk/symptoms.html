@@ -1,0 +1,219 @@
+{% extends "kiosk/base.html" %}
+{% block content %}
+<div class="w-full max-w-7xl h-full max-h-full overflow-hidden">
+  <div class="bg-white dark:bg-zinc-900 rounded-[28px] shadow-[0_24px_60px_rgba(108,74,182,0.10)] border border-primary/10 p-4 md:p-5 h-full flex flex-col gap-3 overflow-hidden">
+    {% include "kiosk/partials/step_header.html" with step_label="STEP 6 OF 6" active_step=6 title="Symptoms" subtitle="Are you experiencing any of these symptoms?" %}
+
+    {% if service_error %}
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300 shrink-0">
+      {{ service_error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/symptoms" class="flex-1 min-h-0 flex flex-col">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300 shrink-0">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 md:gap-3 flex-1 min-h-0 mt-3">
+        <button
+          class="symptom-card group relative flex flex-col items-start justify-between p-4 md:p-5 bg-[#f3effa] dark:bg-zinc-800 border-2 border-primary/30 rounded-[22px] shadow-[0px_20px_40px_rgba(84,48,156,0.08)] transition-all duration-300 hover:scale-[1.01] text-left overflow-hidden min-h-[146px]"
+          data-field="fever"
+          type="button"
+        >
+          <input type="hidden" name="fever" id="fever_input" value="{% if form.fever.value == 'yes' or form.fever.value == True %}yes{% else %}no{% endif %}">
+          <div class="symptom-check absolute top-3 right-3 text-primary">
+            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+          </div>
+          <div class="symptom-icon bg-primary text-white p-2.5 rounded-full transition-colors">
+            <span class="material-symbols-outlined text-[28px]">thermometer</span>
+          </div>
+          <div>
+            <h3 class="text-lg md:text-xl font-bold text-[#241734] dark:text-white mb-0.5">Fever</h3>
+            <p class="text-sm text-[#6f5b8b] dark:text-zinc-400">High temperature or chills</p>
+            {% if form.fever.errors %}
+            <p class="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{{ form.fever.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </button>
+
+        <button
+          class="symptom-card group relative flex flex-col items-start justify-between p-4 md:p-5 bg-[#fcfbff] dark:bg-zinc-950 rounded-[22px] border border-primary/10 shadow-[0px_10px_30px_rgba(84,48,156,0.04)] transition-all duration-300 hover:bg-[#faf7ff] dark:hover:bg-zinc-800 hover:scale-[1.01] text-left overflow-hidden min-h-[146px]"
+          data-field="cough"
+          type="button"
+        >
+          <input type="hidden" name="cough" id="cough_input" value="{% if form.cough.value == 'yes' or form.cough.value == True %}yes{% else %}no{% endif %}">
+          <div class="symptom-check absolute top-3 right-3 text-primary opacity-0">
+            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+          </div>
+          <div class="symptom-icon bg-[#efe7fb] dark:bg-primary/15 text-primary p-2.5 rounded-full transition-colors">
+            <span class="material-symbols-outlined text-[28px]">pulmonology</span>
+          </div>
+          <div>
+            <h3 class="text-lg md:text-xl font-bold text-[#141019] dark:text-white mb-0.5">Cough</h3>
+            <p class="text-sm text-[#6f5b8b] dark:text-zinc-400">Dry or persistent coughing</p>
+            {% if form.cough.errors %}
+            <p class="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{{ form.cough.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </button>
+
+        <button
+          class="symptom-card group relative flex flex-col items-start justify-between p-4 md:p-5 bg-[#fcfbff] dark:bg-zinc-950 rounded-[22px] border border-primary/10 shadow-[0px_10px_30px_rgba(84,48,156,0.04)] transition-all duration-300 hover:bg-[#faf7ff] dark:hover:bg-zinc-800 hover:scale-[1.01] text-left overflow-hidden min-h-[146px]"
+          data-field="chest_pain"
+          type="button"
+        >
+          <input type="hidden" name="chest_pain" id="chest_pain_input" value="{% if form.chest_pain.value == 'yes' or form.chest_pain.value == True %}yes{% else %}no{% endif %}">
+          <div class="symptom-check absolute top-3 right-3 text-primary opacity-0">
+            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+          </div>
+          <div class="symptom-icon bg-[#efe7fb] dark:bg-primary/15 text-primary p-2.5 rounded-full transition-colors">
+            <span class="material-symbols-outlined text-[28px]">cardiology</span>
+          </div>
+          <div>
+            <h3 class="text-lg md:text-xl font-bold text-[#141019] dark:text-white mb-0.5">Chest Pain</h3>
+            <p class="text-sm text-[#6f5b8b] dark:text-zinc-400">Pressure or sharp discomfort</p>
+            {% if form.chest_pain.errors %}
+            <p class="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{{ form.chest_pain.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </button>
+
+        <button
+          class="symptom-card group relative flex flex-col items-start justify-between p-4 md:p-5 bg-[#fcfbff] dark:bg-zinc-950 rounded-[22px] border border-primary/10 shadow-[0px_10px_30px_rgba(84,48,156,0.04)] transition-all duration-300 hover:bg-[#faf7ff] dark:hover:bg-zinc-800 hover:scale-[1.01] text-left overflow-hidden min-h-[146px]"
+          data-field="shortness_of_breath"
+          type="button"
+        >
+          <input type="hidden" name="shortness_of_breath" id="shortness_of_breath_input" value="{% if form.shortness_of_breath.value == 'yes' or form.shortness_of_breath.value == True %}yes{% else %}no{% endif %}">
+          <div class="symptom-check absolute top-3 right-3 text-primary opacity-0">
+            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+          </div>
+          <div class="symptom-icon bg-[#efe7fb] dark:bg-primary/15 text-primary p-2.5 rounded-full transition-colors">
+            <span class="material-symbols-outlined text-[28px]">air</span>
+          </div>
+          <div>
+            <h3 class="text-lg md:text-xl font-bold text-[#141019] dark:text-white mb-0.5">Shortness of Breath</h3>
+            <p class="text-sm text-[#6f5b8b] dark:text-zinc-400">Difficulty breathing normally</p>
+            {% if form.shortness_of_breath.errors %}
+            <p class="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{{ form.shortness_of_breath.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </button>
+
+        <button
+          class="symptom-card group relative flex flex-col items-start justify-between p-4 md:p-5 bg-[#fcfbff] dark:bg-zinc-950 rounded-[22px] border border-primary/10 shadow-[0px_10px_30px_rgba(84,48,156,0.04)] transition-all duration-300 hover:bg-[#faf7ff] dark:hover:bg-zinc-800 hover:scale-[1.01] text-left overflow-hidden min-h-[146px]"
+          data-field="dizziness"
+          type="button"
+        >
+          <input type="hidden" name="dizziness" id="dizziness_input" value="{% if form.dizziness.value == 'yes' or form.dizziness.value == True %}yes{% else %}no{% endif %}">
+          <div class="symptom-check absolute top-3 right-3 text-primary opacity-0">
+            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+          </div>
+          <div class="symptom-icon bg-[#efe7fb] dark:bg-primary/15 text-primary p-2.5 rounded-full transition-colors">
+            <span class="material-symbols-outlined text-[28px]">sensors</span>
+          </div>
+          <div>
+            <h3 class="text-lg md:text-xl font-bold text-[#141019] dark:text-white mb-0.5">Dizziness</h3>
+            <p class="text-sm text-[#6f5b8b] dark:text-zinc-400">Lightheadedness or instability</p>
+            {% if form.dizziness.errors %}
+            <p class="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{{ form.dizziness.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </button>
+
+        <button
+          class="symptom-card group relative flex flex-col items-start justify-between p-4 md:p-5 bg-[#fcfbff] dark:bg-zinc-950 rounded-[22px] border border-primary/10 shadow-[0px_10px_30px_rgba(84,48,156,0.04)] transition-all duration-300 hover:bg-[#faf7ff] dark:hover:bg-zinc-800 hover:scale-[1.01] text-left overflow-hidden min-h-[146px]"
+          data-field="fatigue"
+          type="button"
+        >
+          <input type="hidden" name="fatigue" id="fatigue_input" value="{% if form.fatigue.value == 'yes' or form.fatigue.value == True %}yes{% else %}no{% endif %}">
+          <div class="symptom-check absolute top-3 right-3 text-primary opacity-0">
+            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+          </div>
+          <div class="symptom-icon bg-[#efe7fb] dark:bg-primary/15 text-primary p-2.5 rounded-full transition-colors">
+            <span class="material-symbols-outlined text-[28px]">bedtime</span>
+          </div>
+          <div>
+            <h3 class="text-lg md:text-xl font-bold text-[#141019] dark:text-white mb-0.5">Fatigue</h3>
+            <p class="text-sm text-[#6f5b8b] dark:text-zinc-400">Extreme tiredness or weakness</p>
+            {% if form.fatigue.errors %}
+            <p class="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{{ form.fatigue.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </button>
+      </div>
+
+      <div class="flex justify-center pt-2 shrink-0">
+        <button class="w-full max-w-2xl h-11 md:h-12 rounded-full text-white text-base font-bold shadow-xl shadow-primary/30 hover:shadow-primary/40 active:scale-95 transition-all flex items-center justify-center gap-2.5 custom-gradient-bg" type="submit">
+          Review Results
+          <span class="material-symbols-outlined text-xl">arrow_forward</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const selectedCardClasses = [
+  "bg-[#f3effa]",
+  "border-2",
+  "border-primary/30",
+  "shadow-[0px_20px_40px_rgba(84,48,156,0.08)]",
+  "dark:bg-zinc-800",
+];
+
+const unselectedCardClasses = [
+  "bg-[#fcfbff]",
+  "border",
+  "border-primary/10",
+  "shadow-[0px_10px_30px_rgba(84,48,156,0.04)]",
+  "dark:bg-zinc-950",
+];
+
+function setSymptomCardState(card, isSelected) {
+  const icon = card.querySelector(".symptom-icon");
+  const check = card.querySelector(".symptom-check");
+
+  card.classList.remove(...selectedCardClasses, ...unselectedCardClasses);
+  card.classList.add(...(isSelected ? selectedCardClasses : unselectedCardClasses));
+
+  if (isSelected) {
+    icon.classList.remove("bg-[#efe7fb]", "dark:bg-primary/15", "text-primary");
+    icon.classList.add("bg-primary", "text-white");
+    check.classList.remove("opacity-0");
+  } else {
+    icon.classList.remove("bg-primary", "text-white");
+    icon.classList.add("bg-[#efe7fb]", "dark:bg-primary/15", "text-primary");
+    check.classList.add("opacity-0");
+  }
+}
+
+function syncSymptomCards() {
+  document.querySelectorAll(".symptom-card").forEach((card) => {
+    const field = card.dataset.field;
+    const input = document.getElementById(`${field}_input`);
+    setSymptomCardState(card, input && input.value === "yes");
+  });
+}
+
+document.querySelectorAll(".symptom-card").forEach((card) => {
+  card.addEventListener("click", () => {
+    const field = card.dataset.field;
+    const input = document.getElementById(`${field}_input`);
+    if (!input) {
+      return;
+    }
+    input.value = input.value === "yes" ? "no" : "yes";
+    syncSymptomCards();
+  });
+});
+
+syncSymptomCards();
+</script>
+{% endblock %}

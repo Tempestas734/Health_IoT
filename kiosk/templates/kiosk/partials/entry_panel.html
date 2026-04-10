@@ -1,0 +1,18 @@
+<button id="{{ panel_id }}" class="entry-panel" type="button" onclick="setActiveField('{{ field_name }}')">
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-xl {{ icon_bg_class }} flex items-center justify-center text-primary shrink-0">
+        <span class="material-symbols-outlined text-[22px]">{{ icon_name }}</span>
+      </div>
+      <div class="text-left">
+        <h2 class="font-bold text-base md:text-lg text-[#141019] dark:text-white">{{ title }}</h2>
+        <p class="text-[#6f5b8b] dark:text-zinc-400 text-xs md:text-sm">{{ subtitle }}</p>
+      </div>
+    </div>
+    <span class="px-3 py-1 bg-[#f3effa] dark:bg-zinc-800 text-primary font-bold rounded-full text-xs">{{ unit }}</span>
+  </div>
+  <div class="mt-4 flex items-end justify-center">
+    <span id="{{ value_id }}" class="text-5xl md:text-6xl font-black text-primary tracking-tighter">{{ initial_value }}</span>
+    <span class="ml-2 text-lg md:text-xl font-bold text-[#6f5b8b]/40 dark:text-zinc-400/40 mb-1.5">{{ unit }}</span>
+  </div>
+</button>

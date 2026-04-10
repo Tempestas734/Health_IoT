@@ -1,0 +1,31 @@
+{% extends "kiosk/base.html" %}
+{% block content %}
+<div class="w-full h-full flex flex-col items-center justify-center overflow-hidden">
+  <div class="text-center mb-8 shrink-0">
+    <h1 class="text-[#141019] dark:text-white text-4xl font-extrabold tracking-tight mb-3">Welcome to Health Check</h1>
+    <p class="text-[#6f5b8b] dark:text-zinc-400 text-md">Select a method below to begin your session</p>
+  </div>
+
+  <div class="w-full max-w-6xl h-[60vh] flex gap-8 items-stretch">
+    <button class="group relative flex-1 flex flex-col items-center justify-center p-12 bg-white dark:bg-zinc-900 border-2 border-primary/10 hover:border-primary/50 rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl text-center">
+      <div class="relative w-40 h-40 mb-10 flex items-center justify-center">
+        <div class="absolute inset-0 bg-primary/5 rounded-full scale-150 rfid-glow"></div>
+        <span class="material-symbols-outlined text-8xl text-primary">contactless</span>
+        <div class="absolute -bottom-4 w-24 h-2 bg-primary/20 rounded-full blur-sm"></div>
+      </div>
+      <h3 class="text-4xl font-bold text-[#141019] dark:text-white mb-6">Connect RFID Card</h3>
+      <p class="text-[#6f5b8b] dark:text-zinc-400 text-lg max-w-xs leading-relaxed">Hold your patient card near the sensor to quickly sign in</p>
+    </button>
+
+    <button class="group relative flex-1 flex flex-col items-center justify-center p-12 custom-gradient-bg rounded-xl transition-all duration-300 shadow-xl hover:shadow-primary/40 text-center overflow-hidden" onclick="location.href='/consent'">
+      <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 transition-transform group-hover:scale-110"></div>
+      <div class="relative w-40 h-40 mb-10 flex items-center justify-center">
+        <div class="absolute inset-0 bg-white/10 rounded-full scale-150"></div>
+        <span class="material-symbols-outlined text-8xl text-white">person_add</span>
+      </div>
+      <h3 class="text-4xl font-bold text-white mb-6">Continue as Guest</h3>
+      <p class="text-white/90 text-lg max-w-xs leading-relaxed">Start a private, one-time session without storing your history</p>
+    </button>
+  </div>
+</div>
+{% endblock %}

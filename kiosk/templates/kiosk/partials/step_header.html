@@ -1,0 +1,17 @@
+<div class="shrink-0 space-y-2">
+  <div class="flex items-center justify-between gap-4 flex-wrap">
+    <span class="px-4 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full tracking-wider">{{ step_label }}</span>
+    <div class="flex gap-1.5">
+      <div class="{% if active_step == 1 %}w-12 bg-primary{% else %}w-6 bg-primary/20{% endif %} h-1.5 rounded-full"></div>
+      <div class="{% if active_step == 2 %}w-12 bg-primary{% else %}w-6 bg-primary/20{% endif %} h-1.5 rounded-full"></div>
+      <div class="{% if active_step == 3 %}w-12 bg-primary{% else %}w-6 bg-primary/20{% endif %} h-1.5 rounded-full"></div>
+      <div class="{% if active_step == 4 %}w-12 bg-primary{% else %}w-6 bg-primary/20{% endif %} h-1.5 rounded-full"></div>
+      <div class="{% if active_step == 5 %}w-12 bg-primary{% else %}w-6 bg-primary/20{% endif %} h-1.5 rounded-full"></div>
+      <div class="{% if active_step == 6 %}w-12 bg-primary{% else %}w-6 bg-primary/20{% endif %} h-1.5 rounded-full"></div>
+    </div>
+  </div>
+  <div>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-[#141019] dark:text-white">{{ title }}</h1>
+    <p class="text-[#6f5b8b] dark:text-zinc-400 text-sm mt-1">{{ subtitle }}</p>
+  </div>
+</div>

@@ -1,0 +1,119 @@
+{% extends "kiosk/base.html" %}
+{% block content %}
+<div class="w-full max-w-[850px] h-full max-h-full bg-white dark:bg-zinc-900 rounded-lg shadow-[0_20px_50px_rgba(117,62,193,0.12)] p-6 md:p-10 flex flex-col overflow-hidden">
+  <div class="text-center mb-6 shrink-0">
+    <h1 class="text-[#141019] dark:text-white text-2xl md:text-3xl font-bold tracking-tight mb-2">Medical Consent and Terms</h1>
+    <p class="text-[#6f5b8b] dark:text-zinc-400 text-sm md:text-base">Please review the key points below to proceed with your health check</p>
+  </div>
+
+  <div class="flex-1 overflow-y-auto mb-6 pr-2 custom-scrollbar bg-background-light dark:bg-zinc-800/30 rounded-xl border border-primary/5">
+    <div class="p-6 space-y-4">
+      <div class="flex gap-4 items-start">
+        <div class="mt-1 bg-primary/10 p-1.5 rounded-lg shrink-0">
+          <span class="material-symbols-outlined text-primary text-lg">security</span>
+        </div>
+        <div>
+          <h3 class="font-bold text-[#141019] dark:text-white text-sm uppercase tracking-wider mb-1">Privacy and Data Collection</h3>
+          <p class="text-[#4a3e5d] dark:text-zinc-300 text-sm leading-relaxed">This kiosk collects blood pressure, heart rate, and body composition. All data is encrypted and complies with international healthcare protection standards.</p>
+        </div>
+      </div>
+      <div class="flex gap-4 items-start">
+        <div class="mt-1 bg-primary/10 p-1.5 rounded-lg shrink-0">
+          <span class="material-symbols-outlined text-primary text-lg">analytics</span>
+        </div>
+        <div>
+          <h3 class="font-bold text-[#141019] dark:text-white text-sm uppercase tracking-wider mb-1">Use of Information</h3>
+          <p class="text-[#4a3e5d] dark:text-zinc-300 text-sm leading-relaxed">Measurements are for informational purposes only. Data is only shared with your healthcare provider if you explicitly authorize it at the end of the session.</p>
+        </div>
+      </div>
+      <div class="flex gap-4 items-start">
+        <div class="mt-1 bg-primary/10 p-1.5 rounded-lg shrink-0">
+          <span class="material-symbols-outlined text-primary text-lg">warning</span>
+        </div>
+        <div>
+          <h3 class="font-bold text-[#141019] dark:text-white text-sm uppercase tracking-wider mb-1">Limitations of Service</h3>
+          <p class="text-[#4a3e5d] dark:text-zinc-300 text-sm leading-relaxed">This is not for emergencies. If you have chest pain or acute symptoms, contact emergency services immediately. Kiosk sensors may have slight variations.</p>
+        </div>
+      </div>
+      <div class="flex gap-4 items-start">
+        <div class="mt-1 bg-primary/10 p-1.5 rounded-lg shrink-0">
+          <span class="material-symbols-outlined text-primary text-lg">fact_check</span>
+        </div>
+        <div>
+          <h3 class="font-bold text-[#141019] dark:text-white text-sm uppercase tracking-wider mb-1">Patient Consent</h3>
+          <p class="text-[#4a3e5d] dark:text-zinc-300 text-sm leading-relaxed">By proceeding, you voluntarily consent to data collection. You can stop at any time, which results in immediate deletion of temporary data.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-4 shrink-0">
+    <label class="flex items-center gap-4 cursor-pointer group p-4 bg-lavender-soft/50 dark:bg-zinc-800 rounded-lg border border-primary/10 hover:border-primary/40 transition-all">
+      <div class="relative flex items-center">
+        <input id="agree" class="peer h-5 w-5 rounded border-zinc-300 text-primary focus:ring-primary focus:ring-offset-2 transition-all cursor-pointer" type="checkbox"/>
+      </div>
+      <span class="text-[#141019] dark:text-zinc-200 text-sm md:text-base font-semibold select-none">
+        I agree to the medical consent and privacy terms
+      </span>
+    </label>
+    <input id="device_id" value="DEV-PI-001" type="hidden"/>
+    <div id="msg" class="hidden text-sm text-red-600 dark:text-red-400"></div>
+    <button class="w-full py-4 custom-gradient-bg text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-primary/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2" onclick="start()">
+      Accept and Continue
+      <span class="material-symbols-outlined">arrow_forward</span>
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<div class="w-full py-4 text-center text-[#6f5b8b] dark:text-zinc-500 text-xs shrink-0">
+  <p>© 2024 Health Check Systems. All rights reserved.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function start(){
+  const agree = document.getElementById("agree").checked;
+  const device_id = document.getElementById("device_id").value.trim();
+  const msg = document.getElementById("msg");
+
+  if(!agree){
+    msg.classList.remove("hidden");
+    msg.textContent = "Please accept medical consent terms to continue.";
+    return;
+  }
+
+  msg.classList.add("hidden");
+
+  const res = await fetch("/api/consent/start-session", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ agree, device_id, terms_version:"v1", language:"fr" })
+  });
+
+  if(!res.ok){
+    let detail = "";
+    try {
+      const payload = await res.json();
+      if (payload.error) {
+        detail = payload.error;
+      } else if (payload.errors) {
+        const firstField = Object.keys(payload.errors)[0];
+        const firstError = payload.errors[firstField]?.[0];
+        detail = firstError?.message || "Please review the form and try again.";
+      }
+    } catch(_) {
+      detail = await res.text();
+    }
+    msg.classList.remove("hidden");
+    msg.textContent = detail || "Server error. Please try again.";
+    return;
+  }
+
+  const data = await res.json();
+  location.href = "/guest";
+}
+</script>
+{% endblock %}

@@ -1,0 +1,356 @@
+{% extends "kiosk/base.html" %}
+{% block content %}
+<main class="h-full flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
+  <div class="text-center pt-1 shrink-0">
+    <h2 class="text-2xl md:text-3xl font-black tracking-tight text-[#141019] dark:text-white">Your Health Results</h2>
+    <p class="text-sm md:text-base text-slate-500 dark:text-zinc-400 mt-1 font-medium">Measurement successfully completed.</p>
+  </div>
+
+  {% if result.summary %}
+  <div class="max-w-5xl mx-auto w-full shrink-0 rounded-2xl border border-primary/10 bg-white dark:bg-zinc-900 px-5 py-4 shadow-sm">
+    <div class="flex items-start gap-3">
+      <div class="bg-primary/10 text-primary rounded-2xl size-11 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-[24px]">clinical_notes</span>
+      </div>
+      <div>
+        <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-500 dark:text-zinc-400">Summary</h3>
+        <p class="mt-1 text-sm md:text-base leading-relaxed text-[#141019] dark:text-zinc-100">{{ result.summary }}</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if result.final %}
+  <div class="max-w-5xl mx-auto w-full shrink-0 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-4 shadow-sm">
+    <div class="flex items-start gap-3">
+      <div class="bg-primary/10 text-primary rounded-2xl size-11 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-[24px]">monitor_heart</span>
+      </div>
+      <div class="w-full">
+        <div class="flex flex-wrap items-center gap-2">
+          <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-500 dark:text-zinc-400">Risk Summary</h3>
+          <span class="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary">
+            {{ result.final.risk_label }}
+          </span>
+          <span class="inline-flex items-center rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-zinc-300">
+            {{ result.final.urgency_display }}
+          </span>
+        </div>
+        <p class="mt-2 text-sm md:text-base leading-relaxed text-[#141019] dark:text-zinc-100">{{ result.final.display_summary }}</p>
+        <p class="mt-2 text-sm font-semibold text-slate-600 dark:text-zinc-300">Recommended next step: {{ result.final.recommended_action }}</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 max-w-5xl mx-auto w-full flex-1 min-h-0 items-start">
+    <div class="metric-card">
+      <div id="bmi_badge" class="badge"></div>
+      <div class="metric-head">
+        <div class="metric-icon"><span class="material-symbols-outlined text-primary text-[26px]">monitor_weight</span></div>
+        <div class="metric-head-text">
+          <h3 class="metric-title">Body Mass Index</h3>
+          <div class="metric-value-wrap">
+            <span id="bmi_value" class="metric-value">--</span>
+            <span class="metric-unit">BMI</span>
+          </div>
+        </div>
+      </div>
+      <div class="metric-scale-wrap">
+        <div class="metric-scale">
+          <div class="h-full bg-amber-400/40 w-1/4"></div>
+          <div class="h-full bg-emerald-500 w-1/2"></div>
+          <div class="h-full bg-rose-500/40 w-1/4"></div>
+          <div id="bmi_marker" class="scale-marker"></div>
+        </div>
+        <p id="bmi_note" class="metric-note">"BMI status unavailable"</p>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div id="blood_pressure_badge" class="badge"></div>
+      <div class="metric-head">
+        <div class="metric-icon"><span class="material-symbols-outlined text-primary text-[26px]">blood_pressure</span></div>
+        <div class="metric-head-text">
+          <h3 class="metric-title">Blood Pressure</h3>
+          <div class="metric-value-wrap">
+            <span id="blood_pressure_value" class="metric-value">--</span>
+            <span class="metric-unit">mmHg</span>
+          </div>
+        </div>
+      </div>
+      <div class="metric-scale-wrap">
+        <div class="metric-scale">
+          <div class="h-full bg-amber-400/30 w-1/4"></div>
+          <div class="h-full bg-emerald-500 w-1/4"></div>
+          <div class="h-full bg-amber-400/30 w-1/4"></div>
+          <div class="h-full bg-rose-500/40 w-1/4"></div>
+          <div id="blood_pressure_marker" class="scale-marker"></div>
+        </div>
+        <p id="blood_pressure_note" class="metric-note">"Blood pressure unavailable"</p>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div id="heart_rate_badge" class="badge"></div>
+      <div class="metric-head">
+        <div class="metric-icon"><span class="material-symbols-outlined text-primary text-[26px]">favorite</span></div>
+        <div class="metric-head-text">
+          <h3 class="metric-title">Heart Rate</h3>
+          <div class="metric-value-wrap">
+            <span id="heart_rate_value" class="metric-value">--</span>
+            <span class="metric-unit">bpm</span>
+          </div>
+        </div>
+      </div>
+      <div class="metric-scale-wrap">
+        <div class="metric-scale">
+          <div class="h-full bg-amber-400/30 w-1/4"></div>
+          <div class="h-full bg-emerald-500 w-2/4"></div>
+          <div class="h-full bg-rose-500/30 w-1/4"></div>
+          <div id="heart_rate_marker" class="scale-marker"></div>
+        </div>
+        <p id="heart_rate_note" class="metric-note">"Heart rate unavailable"</p>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div id="spo2_badge" class="badge"></div>
+      <div class="metric-head">
+        <div class="metric-icon"><span class="material-symbols-outlined text-primary text-[26px]">respiratory_rate</span></div>
+        <div class="metric-head-text">
+          <h3 class="metric-title">Oxygen Saturation</h3>
+          <div class="metric-value-wrap">
+            <span id="spo2_value" class="metric-value">--</span>
+            <span class="metric-unit">%</span>
+          </div>
+        </div>
+      </div>
+      <div class="metric-scale-wrap">
+        <div class="metric-scale">
+          <div class="h-full bg-rose-500/20 w-1/4"></div>
+          <div class="h-full bg-amber-400/20 w-1/4"></div>
+          <div class="h-full bg-emerald-500 w-2/4"></div>
+          <div id="spo2_marker" class="scale-marker"></div>
+        </div>
+        <p id="spo2_note" class="metric-note">"SpO2 data not provided"</p>
+      </div>
+    </div>
+  </div>
+
+  {% if result.alerts %}
+  <div class="max-w-5xl mx-auto w-full shrink-0 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3 shadow-sm">
+    <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-500 dark:text-zinc-400">Clinical Flags</h3>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {% for alert in result.alerts %}
+      <span class="
+        inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium
+        {% if alert.level == 'urgent' %}
+          border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300
+        {% elif alert.level == 'warning' %}
+          border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300
+        {% else %}
+          border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300
+        {% endif %}
+      ">
+        {% if alert.level == 'urgent' %}Urgent{% elif alert.level == 'warning' %}Caution{% else %}Normal{% endif %}: {{ alert.message }}
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="flex flex-col md:flex-row items-center justify-center gap-3 pt-1 max-w-5xl mx-auto w-full shrink-0">
+    <button class="min-w-[220px] h-11 rounded-full bg-gradient-to-r from-primary to-[#9361e2] text-white text-base font-bold shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all" onclick="location.href='/'">
+      New Session
+    </button>
+    <button class="min-w-[220px] h-11 rounded-full bg-white dark:bg-zinc-800 border border-primary/20 text-[#141019] dark:text-white text-base font-semibold hover:bg-primary/5 transition-all" onclick="location.href='/measure'">
+      Back to Measures
+    </button>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<style type="text/tailwindcss">
+  @layer components {
+    .metric-card {
+      @apply relative bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 md:p-5 flex flex-col shadow-sm overflow-visible;
+    }
+    .badge {
+      @apply absolute top-4 right-4 flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider;
+    }
+    .metric-head {
+      @apply flex items-center gap-3 w-full pr-16;
+    }
+    .metric-head-text {
+      @apply flex flex-col items-start text-left min-w-0;
+    }
+    .metric-icon {
+      @apply bg-primary/5 size-12 rounded-2xl flex items-center justify-center shrink-0;
+    }
+    .metric-title {
+      @apply text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-widest text-[11px] mb-1;
+    }
+    .metric-value-wrap {
+      @apply flex items-baseline gap-2 flex-wrap;
+    }
+    .metric-value {
+      @apply text-4xl md:text-5xl font-black tracking-tighter text-[#141019] dark:text-white leading-none;
+    }
+    .metric-unit {
+      @apply text-sm md:text-base font-bold text-slate-400;
+    }
+    .metric-scale-wrap {
+      @apply mt-3 w-full;
+    }
+    .metric-scale {
+      @apply relative h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-visible flex;
+    }
+    .scale-marker {
+      @apply absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-[3px] rounded-full bg-[#141019] dark:bg-white shadow-[0_0_0_2px_rgba(255,255,255,0.9)] dark:shadow-[0_0_0_2px_rgba(24,24,27,0.9)];
+    }
+    .metric-note {
+      @apply mt-2 text-xs text-slate-500 dark:text-zinc-400 font-medium italic;
+    }
+  }
+</style>
+<script>
+function setBadge(elPrefix, tone, label) {
+  const badge = document.getElementById(`${elPrefix}_badge`);
+  const styles = {
+    good: ["bg-emerald-500/10 text-emerald-600 border-emerald-500/20", "bg-emerald-500"],
+    warn: ["bg-amber-400/10 text-amber-600 border-amber-400/20", "bg-amber-500"],
+    bad: ["bg-rose-500/10 text-rose-600 border-rose-500/20", "bg-rose-500"],
+    neutral: ["bg-slate-400/10 text-slate-600 border-slate-400/20", "bg-slate-400"]
+  };
+  badge.className = `badge ${styles[tone][0]}`;
+  badge.innerHTML = `<span class="size-2 rounded-full animate-pulse ${styles[tone][1]}"></span><span>${label}</span>`;
+}
+
+function setMarker(elId, percent) {
+  const marker = document.getElementById(elId);
+  if (!marker) return;
+  const clamped = Math.max(0, Math.min(100, percent));
+  marker.style.left = `${clamped}%`;
+}
+
+function mapRange(value, min, max) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return 0;
+  const numeric = Number(value);
+  if (max <= min) return 0;
+  return ((numeric - min) / (max - min)) * 100;
+}
+
+(function(){
+  const r = {
+    bmi: {% if result.bmi is not None %}{{ result.bmi }}{% else %}null{% endif %},
+    interpretation: {% if result.interpretation %}"{{ result.interpretation|escapejs }}"{% else %}null{% endif %},
+    systolic_bp: {% if result.systolic_bp is not None %}{{ result.systolic_bp }}{% else %}null{% endif %},
+    diastolic_bp: {% if result.diastolic_bp is not None %}{{ result.diastolic_bp }}{% else %}null{% endif %},
+    blood_pressure_label: {% if result.blood_pressure_label %}"{{ result.blood_pressure_label|escapejs }}"{% else %}null{% endif %},
+    heart_rate: {% if result.heart_rate is not None %}{{ result.heart_rate }}{% else %}null{% endif %},
+    heart_rate_label: {% if result.heart_rate_label %}"{{ result.heart_rate_label|escapejs }}"{% else %}null{% endif %},
+    spo2: {% if result.spo2 is not None %}{{ result.spo2 }}{% else %}null{% endif %}
+  };
+
+  const bmiValue = document.getElementById("bmi_value");
+  const bmiNote = document.getElementById("bmi_note");
+  const bloodPressureValue = document.getElementById("blood_pressure_value");
+  const bloodPressureNote = document.getElementById("blood_pressure_note");
+  const heartRateValue = document.getElementById("heart_rate_value");
+  const heartRateNote = document.getElementById("heart_rate_note");
+  const spo2Value = document.getElementById("spo2_value");
+  const spo2Note = document.getElementById("spo2_note");
+
+  if (r.bmi !== undefined && r.bmi !== null) {
+    const bmi = Number(r.bmi);
+    bmiValue.textContent = bmi.toFixed(1);
+    setMarker("bmi_marker", mapRange(bmi, 10, 40));
+    const interp = String(r.interpretation || "").toLowerCase();
+    if (interp === "normal" || interp === "normal weight") {
+      setBadge("bmi", "good", "Normal");
+      bmiNote.textContent = '"You are within the healthy range"';
+    } else if (interp === "underweight" || interp === "overweight") {
+      setBadge("bmi", "warn", interp === "underweight" ? "Underweight" : "Overweight");
+      bmiNote.textContent = `"BMI indicates ${interp}"`;
+    } else if (interp === "obesity" || interp === "outside_normal") {
+      setBadge("bmi", "bad", interp === "outside_normal" ? "Outside Normal" : "Obesity");
+      bmiNote.textContent = `"BMI indicates ${interp === "outside_normal" ? "outside normal range" : interp}"`;
+    } else {
+      setBadge("bmi", "neutral", "N/A");
+    }
+  } else {
+    setBadge("bmi", "neutral", "N/A");
+    setMarker("bmi_marker", 0);
+  }
+
+  if (r.systolic_bp !== undefined && r.systolic_bp !== null && r.diastolic_bp !== undefined && r.diastolic_bp !== null) {
+    const systolic = Number(r.systolic_bp);
+    const diastolic = Number(r.diastolic_bp);
+    const bpLabel = String(r.blood_pressure_label || "").toLowerCase();
+    bloodPressureValue.textContent = `${Math.round(systolic)}/${Math.round(diastolic)}`;
+    setMarker("blood_pressure_marker", mapRange(systolic, 80, 180));
+    if (bpLabel === "normal") {
+      setBadge("blood_pressure", "good", "Normal");
+      bloodPressureNote.textContent = '"Blood pressure is within the expected range"';
+    } else if (bpLabel === "low") {
+      setBadge("blood_pressure", "warn", "Low");
+      bloodPressureNote.textContent = '"Blood pressure is below the expected range"';
+    } else if (bpLabel === "elevated") {
+      setBadge("blood_pressure", "warn", "Elevated");
+      bloodPressureNote.textContent = '"Blood pressure is above the ideal range"';
+    } else if (bpLabel === "high") {
+      setBadge("blood_pressure", "bad", "High");
+      bloodPressureNote.textContent = '"Blood pressure is high"';
+    } else {
+      setBadge("blood_pressure", "neutral", "N/A");
+    }
+  } else {
+    setBadge("blood_pressure", "neutral", "N/A");
+    setMarker("blood_pressure_marker", 0);
+  }
+
+  if (r.heart_rate !== undefined && r.heart_rate !== null) {
+    const hr = Number(r.heart_rate);
+    const hrLabel = String(r.heart_rate_label || "").toLowerCase();
+    heartRateValue.textContent = String(Math.round(hr));
+    setMarker("heart_rate_marker", mapRange(hr, 40, 140));
+    if (hrLabel === "normal") {
+      setBadge("heart_rate", "good", "Normal");
+      heartRateNote.textContent = '"Heart rate is within the expected resting range"';
+    } else if (hrLabel === "low") {
+      setBadge("heart_rate", "warn", "Low");
+      heartRateNote.textContent = '"Heart rate is below the expected resting range"';
+    } else if (hrLabel === "high") {
+      setBadge("heart_rate", "warn", "High");
+      heartRateNote.textContent = '"Heart rate is above the expected resting range"';
+    } else {
+      setBadge("heart_rate", "neutral", "N/A");
+    }
+  } else {
+    setBadge("heart_rate", "neutral", "N/A");
+    setMarker("heart_rate_marker", 0);
+  }
+
+  if (r.spo2 !== undefined && r.spo2 !== null) {
+    const spo2 = Number(r.spo2);
+    spo2Value.textContent = String(Math.round(spo2));
+    setMarker("spo2_marker", mapRange(spo2, 80, 100));
+    if (spo2 >= 95) {
+      setBadge("spo2", "good", "Excellent");
+      spo2Note.textContent = '"Blood oxygen levels are optimal"';
+    } else if (spo2 >= 92) {
+      setBadge("spo2", "warn", "Monitor");
+      spo2Note.textContent = '"Borderline oxygen saturation"';
+    } else {
+      setBadge("spo2", "bad", "Low");
+      spo2Note.textContent = '"Low oxygen saturation detected"';
+    }
+  } else {
+    setBadge("spo2", "neutral", "N/A");
+    setMarker("spo2_marker", 0);
+  }
+})();
+</script>
+{% endblock %}

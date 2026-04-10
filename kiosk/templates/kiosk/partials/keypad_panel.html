@@ -1,0 +1,30 @@
+<section class="bg-[#fcfbff] dark:bg-zinc-950 rounded-[24px] shadow-[0px_24px_48px_rgba(108,74,182,0.06)] border border-primary/10 p-4 md:p-5 flex flex-col gap-3 min-h-0">
+  <div class="flex items-center justify-between gap-3">
+    <div>
+      <h2 class="font-bold text-lg text-[#141019] dark:text-white">Keypad</h2>
+      <p id="{{ active_label_id }}" class="text-[#6f5b8b] dark:text-zinc-400 text-sm">{{ active_label }}</p>
+    </div>
+    <button class="px-4 py-2 rounded-full bg-primary/10 text-primary text-xs font-bold" type="button" onclick="clearActiveField()">Clear</button>
+  </div>
+
+  <div class="grid grid-cols-3 gap-2.5 flex-1 min-h-0">
+    <button class="measure-key" data-key="1" type="button">1</button>
+    <button class="measure-key" data-key="2" type="button">2</button>
+    <button class="measure-key" data-key="3" type="button">3</button>
+    <button class="measure-key" data-key="4" type="button">4</button>
+    <button class="measure-key" data-key="5" type="button">5</button>
+    <button class="measure-key" data-key="6" type="button">6</button>
+    <button class="measure-key" data-key="7" type="button">7</button>
+    <button class="measure-key" data-key="8" type="button">8</button>
+    <button class="measure-key" data-key="9" type="button">9</button>
+    {% if keypad_mode == "decimal" %}
+    <button class="measure-key" data-key="." type="button">.</button>
+    {% else %}
+    <button class="measure-key-secondary" data-key="clear" type="button">C</button>
+    {% endif %}
+    <button class="measure-key" data-key="0" type="button">0</button>
+    <button class="measure-key-secondary flex items-center justify-center" data-key="backspace" type="button">
+      <span class="material-symbols-outlined text-3xl">backspace</span>
+    </button>
+  </div>
+</section>

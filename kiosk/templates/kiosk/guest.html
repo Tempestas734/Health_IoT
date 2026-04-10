@@ -1,0 +1,164 @@
+{% extends "kiosk/base.html" %}
+{% block content %}
+<div class="w-full max-w-[1000px] bg-white dark:bg-zinc-900 rounded-lg shadow-[0_32px_64px_rgba(117,62,193,0.12)] p-8 md:p-10 flex flex-col items-center max-h-full overflow-hidden">
+  <div class="text-center mb-6 shrink-0">
+    <h1 class="text-[#141019] dark:text-white text-3xl font-bold tracking-tight mb-1">Personal Information</h1>
+    <p class="text-[#6f5b8b] dark:text-zinc-400 text-base">Select your biological sex and enter your current age.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-8 w-full items-start flex-1 min-h-0">
+    <div class="md:col-span-5 flex flex-col gap-4">
+      <label class="text-[11px] font-bold text-primary uppercase tracking-widest px-1">Biological Sex</label>
+      <div class="grid grid-cols-2 gap-4">
+        <button class="gender-btn active flex flex-col items-center justify-center gap-3 p-6 border-2 border-primary bg-primary/5 ring-4 ring-primary/10 rounded-lg transition-all duration-300 hover:border-primary/70 bg-white dark:bg-zinc-800" data-sex="M" type="button">
+          <span class="material-symbols-outlined text-5xl text-primary">male</span>
+          <span class="text-lg font-bold text-[#141019] dark:text-white">Male</span>
+        </button>
+        <button class="gender-btn flex flex-col items-center justify-center gap-3 p-6 border-2 border-primary/10 rounded-lg transition-all duration-300 hover:border-primary/50 bg-white dark:bg-zinc-800" data-sex="F" type="button">
+          <span class="material-symbols-outlined text-5xl text-primary">female</span>
+          <span class="text-lg font-bold text-[#141019] dark:text-white">Female</span>
+        </button>
+      </div>
+      <div class="mt-2 p-4 bg-lavender-soft/50 rounded-xl border border-primary/5">
+        <p class="text-xs text-[#6f5b8b]/80 leading-relaxed">
+          <span class="material-symbols-outlined text-sm align-middle mr-1">info</span>
+          Information is required for the accuracy of medical calculations and health ranges.
+        </p>
+      </div>
+    </div>
+
+    <div class="hidden md:flex md:col-span-1 justify-center">
+      <div class="w-px h-full bg-primary/10"></div>
+    </div>
+
+    <div class="md:col-span-6 flex flex-col gap-4 min-h-0">
+      <label class="text-[11px] font-bold text-primary uppercase tracking-widest px-1">Current Age</label>
+      <div class="flex gap-4">
+        <div class="flex-1 relative">
+          <input id="age_display" class="w-full text-center text-4xl font-bold py-3 px-4 bg-lavender-soft border-none rounded-xl text-medical-purple focus:ring-4 focus:ring-primary/20 dark:bg-zinc-800 dark:text-white" readonly type="text" value="25"/>
+          <span class="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-bold text-sm">Years</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="1" type="button">1</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="2" type="button">2</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="3" type="button">3</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="4" type="button">4</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="5" type="button">5</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="6" type="button">6</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="7" type="button">7</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="8" type="button">8</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="9" type="button">9</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl text-primary/40 bg-transparent border border-primary/10" data-key="backspace" type="button"><span class="material-symbols-outlined">backspace</span></button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl bg-lavender-soft text-medical-purple hover:bg-primary hover:text-white transition-all duration-200 shadow-sm border border-primary/5" data-key="0" type="button">0</button>
+        <button class="num-key flex items-center justify-center text-xl font-bold h-12 rounded-xl text-primary/40 bg-transparent border border-primary/10" data-key="clear" type="button"><span class="material-symbols-outlined">close</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="msg" class="hidden mt-3 text-sm text-red-600 dark:text-red-400 text-center shrink-0"></div>
+  <div class="mt-4 w-full max-w-sm shrink-0">
+    <button class="w-full py-4 rounded-full custom-gradient-bg text-white text-xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all" onclick="save()">
+      Continue
+      <span class="material-symbols-outlined text-xl">arrow_forward</span>
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedSex = "M";
+let ageValue = "25";
+
+function setSex(value){
+  selectedSex = value;
+  document.querySelectorAll(".gender-btn").forEach((btn) => {
+    const active = btn.dataset.sex === value;
+    btn.classList.toggle("border-primary", active);
+    btn.classList.toggle("bg-primary/5", active);
+    btn.classList.toggle("ring-4", active);
+    btn.classList.toggle("ring-primary/10", active);
+    btn.classList.toggle("border-primary/10", !active);
+    if (!active) btn.classList.remove("ring-4", "ring-primary/10", "bg-primary/5");
+  });
+}
+
+function renderAge(){
+  document.getElementById("age_display").value = ageValue === "" ? "0" : ageValue;
+}
+
+document.querySelectorAll(".gender-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setSex(btn.dataset.sex));
+});
+
+document.querySelectorAll(".num-key").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const key = btn.dataset.key;
+    if (key === "backspace") {
+      ageValue = ageValue.slice(0, -1);
+      if (ageValue === "") ageValue = "0";
+      renderAge();
+      return;
+    }
+    if (key === "clear") {
+      ageValue = "0";
+      renderAge();
+      return;
+    }
+
+    if (!/^\d$/.test(key)) return;
+
+    if (ageValue === "0") ageValue = key;
+    else if (ageValue.length < 3) ageValue += key;
+
+    const num = Number(ageValue);
+    if (num > 120) ageValue = "120";
+    renderAge();
+  });
+});
+
+async function save(){
+  const age = Number(ageValue || "0");
+  const msg = document.getElementById("msg");
+
+  if(age < 1 || age > 120){
+    msg.classList.remove("hidden");
+    msg.textContent = "Please enter a valid age between 1 and 120.";
+    return;
+  }
+
+  msg.classList.add("hidden");
+
+  const res = await fetch("/api/guest/profile", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ sex: selectedSex, age })
+  });
+
+  if(!res.ok){
+    let detail = "";
+    try {
+      const payload = await res.json();
+      if (payload.error) {
+        detail = payload.error;
+      } else if (payload.errors) {
+        const firstField = Object.keys(payload.errors)[0];
+        const firstError = payload.errors[firstField]?.[0];
+        detail = firstError?.message || "Please review the form and try again.";
+      }
+    } catch(_) {
+      detail = await res.text();
+    }
+    msg.classList.remove("hidden");
+    msg.textContent = `Save failed (${res.status}). ${detail}`;
+    return;
+  }
+
+  location.href = "/measure";
+}
+
+renderAge();
+</script>
+{% endblock %}

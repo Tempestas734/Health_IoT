@@ -1,0 +1,121 @@
+{% extends "kiosk/base.html" %}
+{% block content %}
+<div class="w-full max-w-7xl h-full max-h-full overflow-hidden">
+  <div class="bg-white dark:bg-zinc-900 rounded-[28px] shadow-[0_24px_60px_rgba(108,74,182,0.10)] border border-primary/10 p-4 md:p-5 lg:p-6 h-full flex flex-col gap-4 overflow-hidden">
+    {% include "kiosk/partials/step_header.html" with step_label="STEP 5 OF 6" active_step=5 title="Heart Rate & SpO2 Entry" subtitle="Select a field, then use the shared keypad to enter heart rate and oxygen saturation." %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(300px,0.9fr)] gap-4 flex-1 min-h-0 items-stretch">
+      <div class="grid grid-rows-2 gap-3 min-h-0">
+        {% include "kiosk/partials/entry_panel.html" with panel_id="heart_rate_panel" field_name="heart_rate" icon_bg_class="bg-primary/10" icon_name="favorite" title="Heart Rate" subtitle="Tap to edit" unit="bpm" value_id="heart_rate_value" initial_value="72" %}
+        {% include "kiosk/partials/entry_panel.html" with panel_id="spo2_panel" field_name="spo2" icon_bg_class="bg-primary/15" icon_name="respiratory_rate" title="SpO2" subtitle="Tap to edit" unit="%" value_id="spo2_value" initial_value="98" %}
+      </div>
+
+      {% include "kiosk/partials/keypad_panel.html" with active_label_id="active_field_label" active_label="Entering heart rate" keypad_mode="integer" %}
+    </div>
+
+    <div id="msg" class="hidden text-sm text-red-600 dark:text-red-400 text-center shrink-0"></div>
+    <div class="flex justify-center shrink-0">
+      <button class="w-full max-w-2xl h-13 md:h-14 rounded-full text-white text-lg md:text-xl font-bold shadow-xl shadow-primary/30 hover:shadow-primary/40 active:scale-95 transition-all flex items-center justify-center gap-3 custom-gradient-bg" onclick="submitVitals()" type="button">
+        Confirm and Continue
+        <span class="material-symbols-outlined text-2xl">arrow_forward</span>
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% include "kiosk/partials/keypad_styles.html" %}
+<script>
+let activeField = "heart_rate";
+const values = {
+  heart_rate: "72",
+  spo2: "98",
+};
+
+function setActiveField(field) {
+  activeField = field;
+  const labels = { heart_rate: "heart rate", spo2: "SpO2" };
+  document.getElementById("active_field_label").textContent = `Entering ${labels[field]}`;
+  document.getElementById("heart_rate_panel").classList.toggle("ring-4", field === "heart_rate");
+  document.getElementById("heart_rate_panel").classList.toggle("ring-primary/15", field === "heart_rate");
+  document.getElementById("spo2_panel").classList.toggle("ring-4", field === "spo2");
+  document.getElementById("spo2_panel").classList.toggle("ring-primary/15", field === "spo2");
+}
+
+function renderValues() {
+  document.getElementById("heart_rate_value").textContent = values.heart_rate || "0";
+  document.getElementById("spo2_value").textContent = values.spo2 || "0";
+}
+
+function clearActiveField() {
+  values[activeField] = "0";
+  renderValues();
+}
+
+function applyKey(key) {
+  let nextValue = values[activeField];
+  if (key === "clear") {
+    clearActiveField();
+    return;
+  }
+  if (key === "backspace") {
+    nextValue = nextValue.slice(0, -1);
+    values[activeField] = nextValue || "0";
+    renderValues();
+    return;
+  }
+  if (!/^\d$/.test(key)) return;
+  nextValue = nextValue === "0" ? key : `${nextValue}${key}`;
+  values[activeField] = nextValue.slice(0, 3);
+  renderValues();
+}
+
+document.querySelectorAll(".measure-key, .measure-key-secondary").forEach((button) => {
+  button.addEventListener("click", () => applyKey(button.dataset.key));
+});
+
+async function submitVitals() {
+  const heart_rate = Number(values.heart_rate);
+  const spo2 = Number(values.spo2);
+  const msg = document.getElementById("msg");
+
+  if (!heart_rate || !spo2) {
+    msg.classList.remove("hidden");
+    msg.textContent = "Heart rate and SpO2 are required.";
+    return;
+  }
+
+  msg.classList.add("hidden");
+
+  const res = await fetch("/api/vitals/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ heart_rate, spo2 })
+  });
+
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const payload = await res.json();
+      if (payload.error) detail = payload.error;
+      else if (payload.errors) {
+        const firstField = Object.keys(payload.errors)[0];
+        const firstError = payload.errors[firstField]?.[0];
+        detail = firstError?.message || "Please review the form and try again.";
+      }
+    } catch (_) {
+      detail = await res.text();
+    }
+    msg.classList.remove("hidden");
+    msg.textContent = detail || "Unable to submit vitals.";
+    return;
+  }
+
+  location.href = "/symptoms";
+}
+
+renderValues();
+setActiveField("heart_rate");
+</script>
+{% endblock %}

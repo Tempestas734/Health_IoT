@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#753ec1",
+          "background-light": "#f7f6f8",
+          "background-dark": "#18141e",
+          "lavender-soft": "#f3f0fa",
+          "lavender-light": "#f3effa",
+          "medical-purple": "#753ec1",
+          "medical-purple-light": "#9d66eb"
+        },
+        fontFamily: {
+          "display": ["Inter", "sans-serif"]
+        },
+        borderRadius: {
+          "DEFAULT": "1rem",
+          "lg": "1.5rem",
+          "xl": "3rem",
+          "full": "9999px"
+        },
+      },
+    },
+  }
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    body {
+      font-family: "Inter", sans-serif;
+      overflow: hidden;
+    }
+  }
+  .custom-gradient-bg {
+    background: linear-gradient(135deg, #753ec1 0%, #9d66eb 100%);
+  }
+  .rfid-glow {
+    box-shadow: 0 0 30px rgba(117, 62, 193, 0.2);
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #753ec133;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #753ec166;
+  }
+</style>
+</head>
+<body class="bg-lavender-soft dark:bg-background-dark h-screen w-screen flex flex-col font-display overflow-hidden">
+<header class="w-full px-6 py-4 flex justify-between items-center shrink-0">
+  <div class="flex items-center gap-4">
+    <div class="bg-primary p-3 rounded-lg text-white shadow-lg shadow-primary/20">
+      <span class="material-symbols-outlined text-lg">medical_services</span>
+    </div>
+    <h2 class="text-[#141019] dark:text-white text-lg font-bold tracking-tight">Health Check</h2>
+  </div>
+  <div class="flex gap-4">
+    <button class="flex items-center justify-center rounded-full h-9 w-9 bg-white dark:bg-zinc-800 shadow-sm border border-primary/10 hover:bg-primary/5 transition-colors">
+      <span class="material-symbols-outlined text-primary text-lg">language</span>
+    </button>
+    <button class="flex items-center justify-center rounded-full h-9 w-9 bg-white dark:bg-zinc-800 shadow-sm border border-primary/10 hover:bg-primary/5 transition-colors">
+      <span class="material-symbols-outlined text-primary text-lg">help</span>
+    </button>
+  </div>
+</header>
+
+<main class="flex-1 min-h-0 flex items-center justify-center px-12 overflow-hidden">
+  {% block content %}{% endblock %}
+</main>
+
+{% block footer %}
+<footer class="w-full py-4 shrink-0 text-center">
+  <p class="text-[#6f5b8b] dark:text-zinc-500 text-sm">
+    By proceeding you agree to our
+    <a class="text-primary font-semibold underline underline-offset-4 hover:opacity-80 transition-opacity mx-1" href="#">Medical Consent</a>
+    and
+    <a class="text-primary font-semibold underline underline-offset-4 hover:opacity-80 transition-opacity mx-1" href="#">Terms of Use</a>
+  </p>
+</footer>
+{% endblock %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
