@@ -26,6 +26,7 @@ from .forms import (
 )
 from .persistence import get_screening_repository
 from .supabase import SupabaseServiceError
+from .services.receipt_printer import build_receipt_text, print_receipt
 from .use_cases import (
     finalize_screening,
     persist_blood_pressure,
@@ -358,6 +359,26 @@ def result(request):
             "guest_profile": get_step_data(request.session, "guest"),
         },
     )
+
+
+@require_POST
+def print_result(request):
+    assessment = request.session.get(ASSESSMENT_RESULT_KEY)
+    if not assessment:
+        return JsonResponse(
+            {"ok": False, "error": "No assessment found for this session."},
+            status=400,
+        )
+
+    guest_profile = get_step_data(request.session, "guest")
+    receipt_text = build_receipt_text(assessment, guest_profile)
+
+    try:
+        print_receipt(receipt_text)
+    except Exception as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=500)
+
+    return JsonResponse({"ok": True})
 
 
 @csrf_exempt

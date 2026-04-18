@@ -1,4 +1,12 @@
-Django>=6.0,<6.1
-djangorestframework>=3.16,<3.17
-python-dotenv>=1.0,<2.0
-requests>=2.32,<3.0
+﻿asgiref==3.11.1
+certifi==2026.1.4
+charset-normalizer==3.4.4
+Django==6.0.2
+djangorestframework==3.16.1
+idna==3.11
+python-dotenv==1.2.1
+requests==2.32.5
+pywin32==311
+sqlparse==0.5.5
+tzdata==2025.3
+urllib3==2.6.3

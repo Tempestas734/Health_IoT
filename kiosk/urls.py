@@ -11,6 +11,7 @@ urlpatterns = [
     path("vitals", views.kiosk_vitals, name="vitals"),
     path("symptoms", views.kiosk_symptoms, name="symptoms"),
     path("result", views.kiosk_result, name="result"),
+    path("result/print", views.print_result, name="print_result"),
 
     # API
     path("api/consent/start-session", views.start_session, name="api_start_session"),
