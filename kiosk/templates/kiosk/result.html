@@ -26,7 +26,7 @@
           <div class="h-full bg-rose-500/40 w-1/4"></div>
           <div id="bmi_marker" class="scale-marker"></div>
         </div>
-        <p id="bmi_note" class="metric-note">"BMI status unavailable"</p>
+        <p id="bmi_note" class="metric-note">BMI status unavailable.</p>
       </div>
     </div>
 
@@ -50,7 +50,7 @@
           <div class="h-full bg-rose-500/40 w-1/4"></div>
           <div id="blood_pressure_marker" class="scale-marker"></div>
         </div>
-        <p id="blood_pressure_note" class="metric-note">"Blood pressure unavailable"</p>
+        <p id="blood_pressure_note" class="metric-note">Blood pressure unavailable.</p>
       </div>
     </div>
 
@@ -73,7 +73,7 @@
           <div class="h-full bg-rose-500/30 w-1/4"></div>
           <div id="heart_rate_marker" class="scale-marker"></div>
         </div>
-        <p id="heart_rate_note" class="metric-note">"Heart rate unavailable"</p>
+        <p id="heart_rate_note" class="metric-note">Heart rate unavailable.</p>
       </div>
     </div>
 
@@ -96,19 +96,19 @@
           <div class="h-full bg-emerald-500 w-2/4"></div>
           <div id="spo2_marker" class="scale-marker"></div>
         </div>
-        <p id="spo2_note" class="metric-note">"SpO2 data not provided"</p>
+        <p id="spo2_note" class="metric-note">SpO2 data not provided.</p>
       </div>
     </div>
   </div>
 
   <div class="result-actions flex flex-col md:flex-row items-center justify-center gap-3 pt-1 max-w-5xl mx-auto w-full shrink-0">
-    <button id="print_results_button" class="min-w-[220px] h-11 rounded-full bg-slate-900 dark:bg-white text-white dark:text-[#141019] text-base font-bold shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onclick="printResultsDirectly()">
+    <button id="print_results_button" class="action-button action-button-primary" onclick="printResultsDirectly()">
       Print Receipt
     </button>
-    <button class="min-w-[220px] h-11 rounded-full bg-gradient-to-r from-primary to-[#9361e2] text-white text-base font-bold shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all" onclick="location.href='/'">
+    <button class="action-button action-button-accent" onclick="location.href='/'">
       New Session
     </button>
-    <button class="min-w-[220px] h-11 rounded-full bg-white dark:bg-zinc-800 border border-primary/20 text-[#141019] dark:text-white text-base font-semibold hover:bg-primary/5 transition-all" onclick="location.href='/measure'">
+    <button class="action-button action-button-secondary" onclick="location.href='/measure'">
       Back to Measures
     </button>
   </div>
@@ -118,6 +118,18 @@
 {% block scripts %}
 <style type="text/tailwindcss">
   @layer components {
+    .action-button {
+      @apply min-w-[220px] h-11 rounded-full text-base transition-all;
+    }
+    .action-button-primary {
+      @apply bg-slate-900 dark:bg-white text-white dark:text-[#141019] font-bold shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98];
+    }
+    .action-button-accent {
+      @apply bg-gradient-to-r from-primary to-[#9361e2] text-white font-bold shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-[0.98];
+    }
+    .action-button-secondary {
+      @apply bg-white dark:bg-zinc-800 border border-primary/20 text-[#141019] dark:text-white font-semibold hover:bg-primary/5;
+    }
     .metric-card {
       @apply relative bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 md:p-5 flex flex-col shadow-sm overflow-visible;
     }
@@ -224,8 +236,26 @@ function mapRange(value, min, max) {
   return ((numeric - min) / (max - min)) * 100;
 }
 
-(function(){
-  const r = {
+function hasValue(value) {
+  return value !== undefined && value !== null;
+}
+
+function setTextContent(elementId, value) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function updateMetric({ id, displayValue = "--", note, badgeTone = "neutral", badgeLabel = "N/A", markerPercent = 0 }) {
+  setTextContent(`${id}_value`, displayValue);
+  setTextContent(`${id}_note`, note);
+  setBadge(id, badgeTone, badgeLabel);
+  setMarker(`${id}_marker`, markerPercent);
+}
+
+(function () {
+  const result = {
     bmi: {% if result.bmi is not None %}{{ result.bmi }}{% else %}null{% endif %},
     interpretation: {% if result.interpretation %}"{{ result.interpretation|escapejs }}"{% else %}null{% endif %},
     systolic_bp: {% if result.systolic_bp is not None %}{{ result.systolic_bp }}{% else %}null{% endif %},
@@ -236,102 +266,125 @@ function mapRange(value, min, max) {
     spo2: {% if result.spo2 is not None %}{{ result.spo2 }}{% else %}null{% endif %}
   };
 
-  const bmiValue = document.getElementById("bmi_value");
-  const bmiNote = document.getElementById("bmi_note");
-  const bloodPressureValue = document.getElementById("blood_pressure_value");
-  const bloodPressureNote = document.getElementById("blood_pressure_note");
-  const heartRateValue = document.getElementById("heart_rate_value");
-  const heartRateNote = document.getElementById("heart_rate_note");
-  const spo2Value = document.getElementById("spo2_value");
-  const spo2Note = document.getElementById("spo2_note");
+  if (hasValue(result.bmi)) {
+    const bmi = Number(result.bmi);
+    const interpretation = String(result.interpretation || "").toLowerCase();
+    let badgeTone = "neutral";
+    let badgeLabel = "N/A";
+    let note = "BMI status unavailable.";
 
-  if (r.bmi !== undefined && r.bmi !== null) {
-    const bmi = Number(r.bmi);
-    bmiValue.textContent = bmi.toFixed(1);
-    setMarker("bmi_marker", mapRange(bmi, 10, 40));
-    const interp = String(r.interpretation || "").toLowerCase();
-    if (interp === "normal" || interp === "normal weight") {
-      setBadge("bmi", "good", "Normal");
-      bmiNote.textContent = '"You are within the healthy range"';
-    } else if (interp === "underweight" || interp === "overweight") {
-      setBadge("bmi", "warn", interp === "underweight" ? "Underweight" : "Overweight");
-      bmiNote.textContent = `"BMI indicates ${interp}"`;
-    } else if (interp === "obesity" || interp === "outside_normal") {
-      setBadge("bmi", "bad", interp === "outside_normal" ? "Outside Normal" : "Obesity");
-      bmiNote.textContent = `"BMI indicates ${interp === "outside_normal" ? "outside normal range" : interp}"`;
-    } else {
-      setBadge("bmi", "neutral", "N/A");
+    if (interpretation === "normal" || interpretation === "normal weight") {
+      badgeTone = "good";
+      badgeLabel = "Normal";
+      note = "You are within the healthy range.";
+    } else if (interpretation === "underweight" || interpretation === "overweight") {
+      badgeTone = "warn";
+      badgeLabel = interpretation === "underweight" ? "Underweight" : "Overweight";
+      note = `BMI indicates ${interpretation}.`;
+    } else if (interpretation === "obesity" || interpretation === "outside_normal") {
+      badgeTone = "bad";
+      badgeLabel = interpretation === "outside_normal" ? "Outside Normal" : "Obesity";
+      note = `BMI indicates ${interpretation === "outside_normal" ? "outside the normal range" : interpretation}.`;
     }
+
+    updateMetric({
+      id: "bmi",
+      displayValue: bmi.toFixed(1),
+      note,
+      badgeTone,
+      badgeLabel,
+      markerPercent: mapRange(bmi, 10, 40)
+    });
   } else {
-    setBadge("bmi", "neutral", "N/A");
-    setMarker("bmi_marker", 0);
+    updateMetric({
+      id: "bmi",
+      note: "BMI status unavailable."
+    });
   }
 
-  if (r.systolic_bp !== undefined && r.systolic_bp !== null && r.diastolic_bp !== undefined && r.diastolic_bp !== null) {
-    const systolic = Number(r.systolic_bp);
-    const diastolic = Number(r.diastolic_bp);
-    const bpLabel = String(r.blood_pressure_label || "").toLowerCase();
-    bloodPressureValue.textContent = `${Math.round(systolic)}/${Math.round(diastolic)}`;
-    setMarker("blood_pressure_marker", mapRange(systolic, 80, 180));
-    if (bpLabel === "normal") {
-      setBadge("blood_pressure", "good", "Normal");
-      bloodPressureNote.textContent = '"Blood pressure is within the expected range"';
-    } else if (bpLabel === "low") {
-      setBadge("blood_pressure", "warn", "Low");
-      bloodPressureNote.textContent = '"Blood pressure is below the expected range"';
-    } else if (bpLabel === "elevated") {
-      setBadge("blood_pressure", "warn", "Elevated");
-      bloodPressureNote.textContent = '"Blood pressure is above the ideal range"';
-    } else if (bpLabel === "high") {
-      setBadge("blood_pressure", "bad", "High");
-      bloodPressureNote.textContent = '"Blood pressure is high"';
-    } else {
-      setBadge("blood_pressure", "neutral", "N/A");
-    }
+  if (hasValue(result.systolic_bp) && hasValue(result.diastolic_bp)) {
+    const systolic = Number(result.systolic_bp);
+    const diastolic = Number(result.diastolic_bp);
+    const bloodPressureLabel = String(result.blood_pressure_label || "").toLowerCase();
+    const bloodPressureStates = {
+      normal: ["good", "Normal", "Blood pressure is within the expected range."],
+      low: ["warn", "Low", "Blood pressure is below the expected range."],
+      elevated: ["warn", "Elevated", "Blood pressure is above the ideal range."],
+      high: ["bad", "High", "Blood pressure is high."]
+    };
+    const [badgeTone, badgeLabel, note] =
+      bloodPressureStates[bloodPressureLabel] || ["neutral", "N/A", "Blood pressure unavailable."];
+
+    updateMetric({
+      id: "blood_pressure",
+      displayValue: `${Math.round(systolic)}/${Math.round(diastolic)}`,
+      note,
+      badgeTone,
+      badgeLabel,
+      markerPercent: mapRange(systolic, 80, 180)
+    });
   } else {
-    setBadge("blood_pressure", "neutral", "N/A");
-    setMarker("blood_pressure_marker", 0);
+    updateMetric({
+      id: "blood_pressure",
+      note: "Blood pressure unavailable."
+    });
   }
 
-  if (r.heart_rate !== undefined && r.heart_rate !== null) {
-    const hr = Number(r.heart_rate);
-    const hrLabel = String(r.heart_rate_label || "").toLowerCase();
-    heartRateValue.textContent = String(Math.round(hr));
-    setMarker("heart_rate_marker", mapRange(hr, 40, 140));
-    if (hrLabel === "normal") {
-      setBadge("heart_rate", "good", "Normal");
-      heartRateNote.textContent = '"Heart rate is within the expected resting range"';
-    } else if (hrLabel === "low") {
-      setBadge("heart_rate", "warn", "Low");
-      heartRateNote.textContent = '"Heart rate is below the expected resting range"';
-    } else if (hrLabel === "high") {
-      setBadge("heart_rate", "warn", "High");
-      heartRateNote.textContent = '"Heart rate is above the expected resting range"';
-    } else {
-      setBadge("heart_rate", "neutral", "N/A");
-    }
+  if (hasValue(result.heart_rate)) {
+    const heartRate = Number(result.heart_rate);
+    const heartRateLabel = String(result.heart_rate_label || "").toLowerCase();
+    const heartRateStates = {
+      normal: ["good", "Normal", "Heart rate is within the expected resting range."],
+      low: ["warn", "Low", "Heart rate is below the expected resting range."],
+      high: ["warn", "High", "Heart rate is above the expected resting range."]
+    };
+    const [badgeTone, badgeLabel, note] =
+      heartRateStates[heartRateLabel] || ["neutral", "N/A", "Heart rate unavailable."];
+
+    updateMetric({
+      id: "heart_rate",
+      displayValue: String(Math.round(heartRate)),
+      note,
+      badgeTone,
+      badgeLabel,
+      markerPercent: mapRange(heartRate, 40, 140)
+    });
   } else {
-    setBadge("heart_rate", "neutral", "N/A");
-    setMarker("heart_rate_marker", 0);
+    updateMetric({
+      id: "heart_rate",
+      note: "Heart rate unavailable."
+    });
   }
 
-  if (r.spo2 !== undefined && r.spo2 !== null) {
-    const spo2 = Number(r.spo2);
-    spo2Value.textContent = String(Math.round(spo2));
-    setMarker("spo2_marker", mapRange(spo2, 80, 100));
+  if (hasValue(result.spo2)) {
+    const spo2 = Number(result.spo2);
+    let badgeTone = "bad";
+    let badgeLabel = "Low";
+    let note = "Low oxygen saturation detected.";
+
     if (spo2 >= 95) {
-      setBadge("spo2", "good", "Excellent");
-      spo2Note.textContent = '"Blood oxygen levels are optimal"';
+      badgeTone = "good";
+      badgeLabel = "Excellent";
+      note = "Blood oxygen levels are optimal.";
     } else if (spo2 >= 92) {
-      setBadge("spo2", "warn", "Monitor");
-      spo2Note.textContent = '"Borderline oxygen saturation"';
-    } else {
-      setBadge("spo2", "bad", "Low");
-      spo2Note.textContent = '"Low oxygen saturation detected"';
+      badgeTone = "warn";
+      badgeLabel = "Monitor";
+      note = "Borderline oxygen saturation.";
     }
+
+    updateMetric({
+      id: "spo2",
+      displayValue: String(Math.round(spo2)),
+      note,
+      badgeTone,
+      badgeLabel,
+      markerPercent: mapRange(spo2, 80, 100)
+    });
   } else {
-    setBadge("spo2", "neutral", "N/A");
-    setMarker("spo2_marker", 0);
+    updateMetric({
+      id: "spo2",
+      note: "SpO2 data not provided."
+    });
   }
 })();
 </script>

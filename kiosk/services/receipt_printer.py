@@ -1,193 +1,308 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
 ESC = b"\x1b"
 GS = b"\x1d"
-RECEIPT_WIDTH = 42
+LF = b"\x0a"
+
+DEFAULT_DEVICE_PATH = "/dev/usb/lp0"
+RECEIPT_WIDTH = 48
+DEFAULT_ENCODING = "ascii"
+DEFAULT_TITLE = "MEDICAL KIOSK"
+DEFAULT_SUBTITLE = "Patient Vital Signs"
 
 
-def _safe_line(label: str, value: Any, suffix: str = "") -> str:
-    if value is None or value == "":
-        return f"{label}: N/A"
-    return f"{label}: {value}{suffix}"
+class ReceiptPrinterError(RuntimeError):
+    """Raised when the thermal printer cannot be accessed or written to."""
 
 
-def _center(text: str, width: int = RECEIPT_WIDTH) -> str:
-    normalized = (text or "").strip()
-    if not normalized:
-        return ""
-    if len(normalized) >= width:
-        return normalized[:width]
-    return normalized.center(width)
+@dataclass(slots=True)
+class ReceiptData:
+    patient_name: str
+    measured_at: datetime
+    spo2: str
+    heart_rate: str
+    temperature: str
+    risk_level: str
+    qr_data: str | None = None
+    title: str = DEFAULT_TITLE
+    subtitle: str = DEFAULT_SUBTITLE
+
+
+def _initialize_printer() -> bytes:
+    return ESC + b"@" + ESC + b"2"
+
+
+def _set_bold(enabled: bool) -> bytes:
+    return ESC + b"E" + (b"\x01" if enabled else b"\x00")
+
+
+def _set_align(mode: str) -> bytes:
+    mapping = {
+        "left": b"\x00",
+        "center": b"\x01",
+        "right": b"\x02",
+    }
+    return ESC + b"a" + mapping.get(mode, b"\x00")
+
+
+def _feed(lines: int = 1) -> bytes:
+    safe_lines = max(0, min(10, int(lines)))
+    return ESC + b"d" + bytes([safe_lines])
+
+
+def _cut_paper() -> bytes:
+    return GS + b"V" + b"\x00"
+
+
+def _safe_text(value: Any, fallback: str = "N/A") -> str:
+    if value is None:
+        return fallback
+    text = str(value).strip()
+    return text if text else fallback
+
+
+def _safe_number(value: Any, suffix: str = "", digits: int = 0, fallback: str = "N/A") -> str:
+    if value in (None, ""):
+        return fallback
+
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return _safe_text(value, fallback=fallback)
+
+    if digits > 0:
+        formatted = f"{numeric:.{digits}f}"
+    else:
+        formatted = str(int(round(numeric)))
+
+    return f"{formatted}{suffix}"
+
+
+def _normalize_risk_level(value: Any) -> str:
+    text = _safe_text(value).replace("_", " ")
+    return text.title()
+
+
+def _normalize_datetime(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        return value
+
+    if isinstance(value, str) and value.strip():
+        normalized = value.strip().replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            pass
+
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M"):
+            try:
+                return datetime.strptime(normalized, fmt)
+            except ValueError:
+                continue
+
+    return datetime.now()
+
+
+def _fit(text: str, width: int, align: str = "left") -> str:
+    value = text[:width]
+    if align == "right":
+        return value.rjust(width)
+    if align == "center":
+        return value.center(width)
+    return value.ljust(width)
+
+
+def _center_text(text: str, width: int = RECEIPT_WIDTH) -> str:
+    return _fit(text.strip(), width, align="center")
 
 
 def _divider(char: str = "-") -> str:
     return char * RECEIPT_WIDTH
 
 
-def _normalize_label(value: Any) -> str:
-    if value is None or value == "":
-        return "N/A"
-    text = str(value).replace("_", " ").strip()
-    return text.title() if text else "N/A"
+def _kv_line(label: str, value: str, width: int = RECEIPT_WIDTH) -> str:
+    left = f"{label}:"
+    usable_value_width = max(0, width - len(left) - 1)
+    return f"{left} {_fit(value, usable_value_width, align='right')}"
 
 
-def _status_line(label: str, value: Any) -> str:
-    return f"Status: {_normalize_label(value)}"
+def _measurement_line(label: str, value: str, unit: str) -> str:
+    left_width = 20
+    value_width = 12
+    unit_width = RECEIPT_WIDTH - left_width - value_width
+    return (
+        f"{_fit(label, left_width, 'left')}"
+        f"{_fit(value, value_width, 'right')}"
+        f"{_fit(unit, unit_width, 'right')}"
+    )
 
 
-def _format_measurement_block(title: str, value_line: str, status: Any) -> list[str]:
+def _build_qr_placeholder_block(qr_data: str | None) -> list[str]:
+    if not qr_data:
+        return []
+
     return [
-        title.upper(),
-        value_line,
-        _status_line("Status", status),
-        "",
+        _divider(),
+        _center_text("QR CODE"),
+        _center_text("[ Scan at nurse station ]"),
+        _center_text(qr_data[:RECEIPT_WIDTH]),
     ]
-
-
-def _sex_display(value: Any) -> str:
-    normalized = str(value or "").strip().lower()
-    if normalized == "male":
-        return "Male"
-    if normalized == "female":
-        return "Female"
-    return "N/A"
 
 
 def build_receipt_text(result: dict[str, Any], guest_profile: dict[str, Any] | None = None) -> str:
     guest_profile = guest_profile or {}
-    sex = guest_profile.get("sex")
-    age = guest_profile.get("age")
-    guest_name = guest_profile.get("full_name") or guest_profile.get("name")
+    measured_at = _normalize_datetime(
+        result.get("measured_at")
+        or result.get("created_at")
+        or result.get("timestamp")
+    )
 
+    receipt = ReceiptData(
+        patient_name=_safe_text(
+            guest_profile.get("full_name")
+            or guest_profile.get("name")
+            or result.get("patient_name")
+        ),
+        measured_at=measured_at,
+        spo2=_safe_number(result.get("spo2"), suffix=" %"),
+        heart_rate=_safe_number(result.get("heart_rate"), suffix=" bpm"),
+        temperature=_safe_number(
+            result.get("temperature")
+            or result.get("temp")
+            or result.get("body_temperature"),
+            suffix=" C",
+            digits=1,
+        ),
+        risk_level=_normalize_risk_level(
+            result.get("risk_level")
+            or result.get("risk")
+            or result.get("interpretation")
+        ),
+        qr_data=_safe_text(result.get("qr_data"), fallback="") or None,
+    )
+    return render_receipt_text(receipt)
+
+
+def render_receipt_text(receipt: ReceiptData) -> str:
     lines = [
-        "",
-        _center("+++"),
-        _center("HEALTH CHECK"),
-        _center("Medical Device Result"),
+        _center_text(receipt.title),
+        _center_text(receipt.subtitle),
         _divider("="),
-        datetime.now().strftime("Printed: %Y-%m-%d %H:%M"),
-        f"Sex: {_sex_display(sex)}",
-        f"Age: {age if age not in (None, '') else 'N/A'}",
+        _kv_line("Patient", _safe_text(receipt.patient_name)),
+        _kv_line("Date", receipt.measured_at.strftime("%Y-%m-%d")),
+        _kv_line("Time", receipt.measured_at.strftime("%H:%M:%S")),
+        _divider(),
+        _center_text("VITAL SIGNS"),
+        _divider(),
+        _measurement_line("SpO2", receipt.spo2, ""),
+        _measurement_line("Heart Rate", receipt.heart_rate, ""),
+        _measurement_line("Temperature", receipt.temperature, ""),
+        _divider(),
+        _kv_line("Risk Level", _safe_text(receipt.risk_level)),
     ]
 
-    if guest_name:
-        lines.append(f"Guest: {guest_name}")
-
+    lines.extend(_build_qr_placeholder_block(receipt.qr_data))
     lines.extend(
         [
-            _divider(),
+            _divider("="),
+            _center_text("Please keep this receipt"),
+            _center_text("for your medical record"),
+            "",
             "",
         ]
     )
 
-    lines.extend(
-        _format_measurement_block(
-            "BMI",
-            _safe_line(
-                "Value",
-                f"{float(result['bmi']):.1f}" if result.get("bmi") is not None else None,
-            ),
-            result.get("interpretation"),
-        )
-    )
-    lines.extend(
-        _format_measurement_block(
-            "Blood Pressure",
-            _safe_line(
-                "Value",
-                (
-                    f"{int(round(float(result['systolic_bp'])))}"
-                    f"/{int(round(float(result['diastolic_bp'])))} mmHg"
-                )
-                if result.get("systolic_bp") is not None and result.get("diastolic_bp") is not None
-                else None,
-            ),
-            result.get("blood_pressure_label"),
-        )
-    )
-    lines.extend(
-        _format_measurement_block(
-            "Heart Rate",
-            _safe_line(
-                "Value",
-                int(round(float(result["heart_rate"]))) if result.get("heart_rate") is not None else None,
-                " bpm",
-            ),
-            result.get("heart_rate_label"),
-        )
-    )
-    lines.extend(
-        _format_measurement_block(
-            "SpO2",
-            _safe_line(
-                "Value",
-                int(round(float(result["spo2"]))) if result.get("spo2") is not None else None,
-                "%",
-            ),
-            (
-                "excellent"
-                if result.get("spo2") is not None and float(result["spo2"]) >= 95
-                else "monitor"
-                if result.get("spo2") is not None and float(result["spo2"]) >= 92
-                else "low"
-                if result.get("spo2") is not None
-                else None
-            ),
-        )
-    )
-
-    lines.extend(
-        [
-            _divider(),
-            _center("Thank You For Using"),
-            _center("The Device"),
-            "\n\n\n",
-        ]
-    )
     return "\n".join(lines)
 
 
-def _cut_command() -> bytes:
-    cut_mode = os.getenv("THERMAL_PRINTER_CUT_MODE", "full").strip().lower()
-    feed_lines = os.getenv("THERMAL_PRINTER_FEED_LINES", "4").strip()
+def _text_to_escpos_payload(text: str) -> bytes:
+    lines = text.splitlines()
+    payload = bytearray()
+    payload.extend(_initialize_printer())
 
+    centered_headers = {
+        DEFAULT_TITLE,
+        DEFAULT_SUBTITLE,
+        "VITAL SIGNS",
+        "QR CODE",
+        "[ Scan at nurse station ]",
+        "Please keep this receipt",
+        "for your medical record",
+    }
+
+    for raw_line in lines:
+        line = raw_line.rstrip()
+        stripped = line.strip()
+
+        if not stripped:
+            payload.extend(LF)
+            continue
+
+        if stripped in centered_headers or stripped.startswith("=") or stripped.startswith("-"):
+            payload.extend(_set_align("center"))
+            if stripped in {DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
+                payload.extend(_set_bold(True))
+            payload.extend(line.encode(DEFAULT_ENCODING, errors="replace"))
+            if stripped in {DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
+                payload.extend(_set_bold(False))
+            payload.extend(LF)
+            payload.extend(_set_align("left"))
+            continue
+
+        payload.extend(_set_align("left"))
+        payload.extend(line.encode(DEFAULT_ENCODING, errors="replace"))
+        payload.extend(LF)
+
+    payload.extend(_feed(4))
+    payload.extend(_cut_paper())
+    return bytes(payload)
+
+
+def _write_to_device(payload: bytes, device_path: str) -> None:
     try:
-        feed_value = max(0, min(10, int(feed_lines)))
-    except ValueError:
-        feed_value = 4
-
-    # ESC d n: print and feed n lines before cutting.
-    feed_command = ESC + b"d" + bytes([feed_value])
-
-    # GS V 0: full cut, GS V 1: partial cut for most ESC/POS printers.
-    cut_command = GS + b"V" + (b"\x01" if cut_mode == "partial" else b"\x00")
-    return feed_command + cut_command
-
-
-def print_receipt(text: str) -> None:
-    printer_name = os.getenv("THERMAL_PRINTER_NAME")
-    if not printer_name:
-        raise RuntimeError("THERMAL_PRINTER_NAME is not configured.")
-
-    try:
-        import win32print  # type: ignore
-    except ImportError as exc:
-        raise RuntimeError(
-            "pywin32 is not installed. Install it to enable direct receipt printing."
+        with open(device_path, "wb", buffering=0) as printer_device:
+            printer_device.write(payload)
+            printer_device.flush()
+    except FileNotFoundError as exc:
+        raise ReceiptPrinterError(
+            f"Printer device not found: {device_path}. Check USB connection and device mapping."
+        ) from exc
+    except PermissionError as exc:
+        raise ReceiptPrinterError(
+            f"Permission denied for printer device: {device_path}."
+        ) from exc
+    except OSError as exc:
+        raise ReceiptPrinterError(
+            f"Failed to write to printer device {device_path}: {exc.strerror or exc}"
         ) from exc
 
-    handle = win32print.OpenPrinter(printer_name)
-    try:
-        document_info = ("Medical Device Result", None, "RAW")
-        win32print.StartDocPrinter(handle, 1, document_info)
-        win32print.StartPagePrinter(handle)
-        payload = text.encode("ascii", errors="replace") + _cut_command()
-        win32print.WritePrinter(handle, payload)
-        win32print.EndPagePrinter(handle)
-        win32print.EndDocPrinter(handle)
-    finally:
-        win32print.ClosePrinter(handle)
+
+def print_receipt(text: str, device_path: str | None = None) -> None:
+    payload = _text_to_escpos_payload(text)
+    _write_to_device(payload, device_path or os.getenv("THERMAL_PRINTER_DEVICE", DEFAULT_DEVICE_PATH))
+
+
+def print_receipt_data(receipt: ReceiptData, device_path: str | None = None) -> None:
+    print_receipt(render_receipt_text(receipt), device_path=device_path)
+
+
+def test_print(device_path: str | None = None) -> None:
+    sample = ReceiptData(
+        patient_name="John Doe",
+        measured_at=datetime.now(),
+        spo2="98 %",
+        heart_rate="72 bpm",
+        temperature="36.8 C",
+        risk_level="Low",
+        qr_data="TEST-QR-PLACEHOLDER",
+    )
+    print_receipt_data(sample, device_path=device_path)
+
+
+if __name__ == "__main__":
+    test_print()
