@@ -12,8 +12,8 @@ LF = b"\x0a"
 DEFAULT_DEVICE_PATH = "/dev/usb/lp0"
 RECEIPT_WIDTH = 48
 DEFAULT_ENCODING = "ascii"
-DEFAULT_TITLE = "MEDICAL KIOSK"
-DEFAULT_SUBTITLE = "Patient Vital Signs"
+DEFAULT_TITLE = "Health Check"
+DEFAULT_SUBTITLE = "by Nouha/Aya/Oumaima"
 
 
 class ReceiptPrinterError(RuntimeError):
@@ -23,6 +23,8 @@ class ReceiptPrinterError(RuntimeError):
 @dataclass(slots=True)
 class ReceiptData:
     patient_name: str
+    patient_sex: str
+    patient_age: str
     measured_at: datetime
     spo2: str
     heart_rate: str
@@ -88,6 +90,15 @@ def _normalize_risk_level(value: Any) -> str:
     return text.title()
 
 
+def _normalize_sex(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized == "female":
+        return "Female"
+    if normalized == "male":
+        return "Male"
+    return "N/A"
+
+
 def _normalize_datetime(value: Any) -> datetime:
     if isinstance(value, datetime):
         return value
@@ -142,6 +153,10 @@ def _measurement_line(label: str, value: str, unit: str) -> str:
     )
 
 
+def _patient_summary_line(name: str, sex: str, age: str) -> str:
+    return _center_text(f"{name} | {sex} | {age}")
+
+
 def _build_qr_placeholder_block(qr_data: str | None) -> list[str]:
     if not qr_data:
         return []
@@ -166,7 +181,15 @@ def build_receipt_text(result: dict[str, Any], guest_profile: dict[str, Any] | N
         patient_name=_safe_text(
             guest_profile.get("full_name")
             or guest_profile.get("name")
-            or result.get("patient_name")
+            or result.get("patient_name"),
+            fallback="Guest",
+        ),
+        patient_sex=_normalize_sex(guest_profile.get("sex") or result.get("sex")),
+        patient_age=_safe_text(
+            f"{guest_profile.get('age')} y.o"
+            if guest_profile.get("age") not in (None, "")
+            else result.get("age"),
+            fallback="N/A",
         ),
         measured_at=measured_at,
         spo2=_safe_number(result.get("spo2"), suffix=" %"),
@@ -193,9 +216,14 @@ def render_receipt_text(receipt: ReceiptData) -> str:
         _center_text(receipt.title),
         _center_text(receipt.subtitle),
         _divider("="),
-        _kv_line("Patient", _safe_text(receipt.patient_name)),
-        _kv_line("Date", receipt.measured_at.strftime("%Y-%m-%d")),
-        _kv_line("Time", receipt.measured_at.strftime("%H:%M:%S")),
+        _patient_summary_line(
+            _safe_text(receipt.patient_name, fallback="Guest"),
+            _safe_text(receipt.patient_sex),
+            _safe_text(receipt.patient_age),
+        ),
+        _center_text(
+            f"{receipt.measured_at.strftime('%Y-%m-%d')} | {receipt.measured_at.strftime('%H:%M:%S')}"
+        ),
         _divider(),
         _center_text("VITAL SIGNS"),
         _divider(),
@@ -234,6 +262,7 @@ def _text_to_escpos_payload(text: str) -> bytes:
         "Please keep this receipt",
         "for your medical record",
     }
+    centered_prefixes = ("Guest |", "Male |", "Female |")
 
     for raw_line in lines:
         line = raw_line.rstrip()
@@ -243,7 +272,13 @@ def _text_to_escpos_payload(text: str) -> bytes:
             payload.extend(LF)
             continue
 
-        if stripped in centered_headers or stripped.startswith("=") or stripped.startswith("-"):
+        if (
+            stripped in centered_headers
+            or stripped.startswith("=")
+            or stripped.startswith("-")
+            or " | " in stripped
+            or stripped.startswith(centered_prefixes)
+        ):
             payload.extend(_set_align("center"))
             if stripped in {DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
                 payload.extend(_set_bold(True))
@@ -293,7 +328,9 @@ def print_receipt_data(receipt: ReceiptData, device_path: str | None = None) -> 
 
 def test_print(device_path: str | None = None) -> None:
     sample = ReceiptData(
-        patient_name="John Doe",
+        patient_name="Guest",
+        patient_sex="Female",
+        patient_age="31 y.o",
         measured_at=datetime.now(),
         spo2="98 %",
         heart_rate="72 bpm",

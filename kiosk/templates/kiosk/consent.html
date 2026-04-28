@@ -58,7 +58,7 @@
     </label>
     <input id="device_id" value="DEV-PI-001" type="hidden"/>
     <div id="msg" class="hidden text-sm text-red-600 dark:text-red-400"></div>
-    <button class="w-full py-4 custom-gradient-bg text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-primary/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2" onclick="start()">
+    <button class="w-full py-4 custom-gradient-bg text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-primary/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed" onclick="start(event)">
       Accept and Continue
       <span class="material-symbols-outlined">arrow_forward</span>
     </button>
@@ -78,6 +78,7 @@ async function start(){
   const agree = document.getElementById("agree").checked;
   const device_id = document.getElementById("device_id").value.trim();
   const msg = document.getElementById("msg");
+  const button = event?.currentTarget;
 
   if(!agree){
     msg.classList.remove("hidden");
@@ -86,34 +87,48 @@ async function start(){
   }
 
   msg.classList.add("hidden");
+  msg.textContent = "";
 
-  const res = await fetch("/api/consent/start-session", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ agree, device_id, terms_version:"v1", language:"fr" })
-  });
-
-  if(!res.ok){
-    let detail = "";
-    try {
-      const payload = await res.json();
-      if (payload.error) {
-        detail = payload.error;
-      } else if (payload.errors) {
-        const firstField = Object.keys(payload.errors)[0];
-        const firstError = payload.errors[firstField]?.[0];
-        detail = firstError?.message || "Please review the form and try again.";
-      }
-    } catch(_) {
-      detail = await res.text();
-    }
-    msg.classList.remove("hidden");
-    msg.textContent = detail || "Server error. Please try again.";
-    return;
+  if (button) {
+    button.disabled = true;
   }
 
-  const data = await res.json();
-  location.href = "/guest";
+  try {
+    const res = await fetch("/api/consent/start-session", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ agree, device_id, terms_version:"v1", language:"fr" })
+    });
+
+    if(!res.ok){
+      let detail = "";
+      try {
+        const payload = await res.json();
+        if (payload.error) {
+          detail = payload.error;
+        } else if (payload.errors) {
+          const firstField = Object.keys(payload.errors)[0];
+          const firstError = payload.errors[firstField]?.[0];
+          detail = firstError?.message || "Please review the form and try again.";
+        }
+      } catch(_) {
+        detail = await res.text();
+      }
+      msg.classList.remove("hidden");
+      msg.textContent = detail || "Service unavailable. Please try again.";
+      return;
+    }
+
+    await res.json();
+    location.href = "/guest";
+  } catch (_) {
+    msg.classList.remove("hidden");
+    msg.textContent = "Unable to start the session. Check server and network connectivity.";
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
+  }
 }
 </script>
 {% endblock %}

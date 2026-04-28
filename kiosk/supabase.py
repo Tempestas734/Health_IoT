@@ -8,11 +8,34 @@ class SupabaseServiceError(RuntimeError):
 
 
 def _get_supabase_settings() -> tuple[str, str]:
-    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_url = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
     anon_key = os.getenv("SUPABASE_ANON_KEY")
     if not supabase_url or not anon_key:
         raise SupabaseServiceError("Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env")
     return supabase_url, anon_key
+
+
+def _format_request_exception(exc: requests.RequestException) -> str:
+    message = str(exc).strip() or exc.__class__.__name__
+    normalized = message.lower()
+
+    if "failed to resolve" in normalized or "name or service not known" in normalized:
+        return (
+            "Unable to reach Supabase. Check SUPABASE_URL and DNS/network connectivity."
+        )
+
+    if "nodename nor servname provided" in normalized:
+        return (
+            "Unable to reach Supabase. Check SUPABASE_URL and DNS/network connectivity."
+        )
+
+    if isinstance(exc, requests.Timeout):
+        return "Supabase request timed out. Check network connectivity and service availability."
+
+    if isinstance(exc, requests.ConnectionError):
+        return "Unable to connect to Supabase. Check network connectivity and service availability."
+
+    return f"Supabase request failed: {message}"
 
 
 def _headers(*, prefer: str = "return=representation") -> dict:
@@ -38,7 +61,7 @@ def _request(method: str, path: str, *, json_payload: dict | None = None, params
             timeout=20,
         )
     except requests.RequestException as exc:
-        raise SupabaseServiceError(f"Supabase request failed: {exc}") from exc
+        raise SupabaseServiceError(_format_request_exception(exc)) from exc
 
     if not response.ok:
         raise SupabaseServiceError(f"Supabase request failed: {response.status_code} {response.text}")
