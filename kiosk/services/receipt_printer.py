@@ -12,6 +12,7 @@ LF = b"\x0a"
 DEFAULT_DEVICE_PATH = "/dev/usb/lp0"
 RECEIPT_WIDTH = 48
 DEFAULT_ENCODING = "ascii"
+DEBUG_RECEIPT_VERSION = "DEBUG RECEIPT V2"
 DEFAULT_TITLE = "Health Check"
 DEFAULT_SUBTITLE = "by Nouha/Aya/Oumaima"
 
@@ -213,6 +214,7 @@ def build_receipt_text(result: dict[str, Any], guest_profile: dict[str, Any] | N
 
 def render_receipt_text(receipt: ReceiptData) -> str:
     lines = [
+        _center_text(DEBUG_RECEIPT_VERSION),
         _center_text(receipt.title),
         _center_text(receipt.subtitle),
         _divider("="),
@@ -254,6 +256,7 @@ def _text_to_escpos_payload(text: str) -> bytes:
     payload.extend(_initialize_printer())
 
     centered_headers = {
+        DEBUG_RECEIPT_VERSION,
         DEFAULT_TITLE,
         DEFAULT_SUBTITLE,
         "VITAL SIGNS",
@@ -280,10 +283,10 @@ def _text_to_escpos_payload(text: str) -> bytes:
             or stripped.startswith(centered_prefixes)
         ):
             payload.extend(_set_align("center"))
-            if stripped in {DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
+            if stripped in {DEBUG_RECEIPT_VERSION, DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
                 payload.extend(_set_bold(True))
             payload.extend(line.encode(DEFAULT_ENCODING, errors="replace"))
-            if stripped in {DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
+            if stripped in {DEBUG_RECEIPT_VERSION, DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
                 payload.extend(_set_bold(False))
             payload.extend(LF)
             payload.extend(_set_align("left"))
