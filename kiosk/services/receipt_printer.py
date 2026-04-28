@@ -26,9 +26,14 @@ class ReceiptData:
     patient_sex: str
     patient_age: str
     measured_at: datetime
+    bmi_value: str
+    bmi_label: str
+    blood_pressure_value: str
+    blood_pressure_label: str
     spo2: str
+    spo2_label: str
     heart_rate: str
-    temperature: str
+    heart_rate_label: str
     risk_level: str
     qr_data: str | None = None
     title: str = DEFAULT_TITLE
@@ -157,6 +162,14 @@ def _patient_summary_line(name: str, sex: str, age: str) -> str:
     return _center_text(f"{name} | {sex} | {age}")
 
 
+def _measure_block(title: str, value: str, interpretation: str) -> list[str]:
+    return [
+        _fit(title, 18, "left") + _fit(value, RECEIPT_WIDTH - 18, "right"),
+        _fit("Interpretation", 18, "left") + _fit(interpretation, RECEIPT_WIDTH - 18, "right"),
+        _divider(),
+    ]
+
+
 def _build_qr_placeholder_block(qr_data: str | None) -> list[str]:
     if not qr_data:
         return []
@@ -192,15 +205,18 @@ def build_receipt_text(result: dict[str, Any], guest_profile: dict[str, Any] | N
             fallback="N/A",
         ),
         measured_at=measured_at,
-        spo2=_safe_number(result.get("spo2"), suffix=" %"),
-        heart_rate=_safe_number(result.get("heart_rate"), suffix=" bpm"),
-        temperature=_safe_number(
-            result.get("temperature")
-            or result.get("temp")
-            or result.get("body_temperature"),
-            suffix=" C",
-            digits=1,
+        bmi_value=_safe_number(result.get("bmi"), digits=1),
+        bmi_label=_safe_text(result.get("bmi_label") or result.get("interpretation")),
+        blood_pressure_value=(
+            f"{int(round(float(result.get('systolic_bp'))))}/{int(round(float(result.get('diastolic_bp'))))} mmHg"
+            if result.get("systolic_bp") is not None and result.get("diastolic_bp") is not None
+            else "N/A"
         ),
+        blood_pressure_label=_safe_text(result.get("blood_pressure_label") or result.get("bp_label")),
+        spo2=_safe_number(result.get("spo2"), suffix=" %"),
+        spo2_label=_safe_text(result.get("spo2_label")),
+        heart_rate=_safe_number(result.get("heart_rate"), suffix=" bpm"),
+        heart_rate_label=_safe_text(result.get("heart_rate_label") or result.get("hr_label")),
         risk_level=_normalize_risk_level(
             result.get("risk_level")
             or result.get("risk")
@@ -225,14 +241,19 @@ def render_receipt_text(receipt: ReceiptData) -> str:
             f"{receipt.measured_at.strftime('%Y-%m-%d')} | {receipt.measured_at.strftime('%H:%M:%S')}"
         ),
         _divider(),
-        _center_text("VITAL SIGNS"),
+        _center_text("MEASUREMENTS"),
         _divider(),
-        _measurement_line("SpO2", receipt.spo2, ""),
-        _measurement_line("Heart Rate", receipt.heart_rate, ""),
-        _measurement_line("Temperature", receipt.temperature, ""),
-        _divider(),
-        _kv_line("Risk Level", _safe_text(receipt.risk_level)),
     ]
+
+    lines.extend(_measure_block("BMI", receipt.bmi_value, receipt.bmi_label))
+    lines.extend(_measure_block("Blood Pressure", receipt.blood_pressure_value, receipt.blood_pressure_label))
+    lines.extend(_measure_block("SpO2", receipt.spo2, receipt.spo2_label))
+    lines.extend(_measure_block("Heart Rate", receipt.heart_rate, receipt.heart_rate_label))
+    lines.extend(
+        [
+        _kv_line("Risk Level", _safe_text(receipt.risk_level)),
+        ]
+    )
 
     lines.extend(_build_qr_placeholder_block(receipt.qr_data))
     lines.extend(
@@ -256,7 +277,7 @@ def _text_to_escpos_payload(text: str) -> bytes:
     centered_headers = {
         DEFAULT_TITLE,
         DEFAULT_SUBTITLE,
-        "VITAL SIGNS",
+        "MEASUREMENTS",
         "QR CODE",
         "[ Scan at nurse station ]",
         "Please keep this receipt",
@@ -280,10 +301,10 @@ def _text_to_escpos_payload(text: str) -> bytes:
             or stripped.startswith(centered_prefixes)
         ):
             payload.extend(_set_align("center"))
-            if stripped in {DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
+            if stripped in {DEFAULT_TITLE, "MEASUREMENTS", "QR CODE"}:
                 payload.extend(_set_bold(True))
             payload.extend(stripped.encode(DEFAULT_ENCODING, errors="replace"))
-            if stripped in {DEFAULT_TITLE, "VITAL SIGNS", "QR CODE"}:
+            if stripped in {DEFAULT_TITLE, "MEASUREMENTS", "QR CODE"}:
                 payload.extend(_set_bold(False))
             payload.extend(LF)
             payload.extend(_set_align("left"))
@@ -332,9 +353,14 @@ def test_print(device_path: str | None = None) -> None:
         patient_sex="Female",
         patient_age="31 y.o",
         measured_at=datetime.now(),
+        bmi_value="23.4",
+        bmi_label="Normal weight",
+        blood_pressure_value="118/76 mmHg",
+        blood_pressure_label="Normal",
         spo2="98 %",
+        spo2_label="Normal",
         heart_rate="72 bpm",
-        temperature="36.8 C",
+        heart_rate_label="Normal",
         risk_level="Low",
         qr_data="TEST-QR-PLACEHOLDER",
     )
