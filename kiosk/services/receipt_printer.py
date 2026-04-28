@@ -34,7 +34,6 @@ class ReceiptData:
     spo2_label: str
     heart_rate: str
     heart_rate_label: str
-    risk_level: str
     qr_data: str | None = None
     title: str = DEFAULT_TITLE
     subtitle: str = DEFAULT_SUBTITLE
@@ -162,12 +161,15 @@ def _patient_summary_line(name: str, sex: str, age: str) -> str:
     return _center_text(f"{name} | {sex} | {age}")
 
 
-def _measure_block(title: str, value: str, interpretation: str) -> list[str]:
-    return [
-        _fit(title, 18, "left") + _fit(value, RECEIPT_WIDTH - 18, "right"),
-        _fit("Interpretation", 18, "left") + _fit(interpretation, RECEIPT_WIDTH - 18, "right"),
-        _divider(),
-    ]
+def _compact_measurement_line(title: str, value: str, interpretation: str) -> str:
+    left_width = 16
+    center_width = 14
+    right_width = RECEIPT_WIDTH - left_width - center_width
+    return (
+        f"{_fit(title, left_width, 'left')}"
+        f"{_fit(value, center_width, 'center')}"
+        f"{_fit(interpretation, right_width, 'right')}"
+    )
 
 
 def _build_qr_placeholder_block(qr_data: str | None) -> list[str]:
@@ -217,11 +219,6 @@ def build_receipt_text(result: dict[str, Any], guest_profile: dict[str, Any] | N
         spo2_label=_safe_text(result.get("spo2_label")),
         heart_rate=_safe_number(result.get("heart_rate"), suffix=" bpm"),
         heart_rate_label=_safe_text(result.get("heart_rate_label") or result.get("hr_label")),
-        risk_level=_normalize_risk_level(
-            result.get("risk_level")
-            or result.get("risk")
-            or result.get("interpretation")
-        ),
         qr_data=_safe_text(result.get("qr_data"), fallback="") or None,
     )
     return render_receipt_text(receipt)
@@ -243,17 +240,12 @@ def render_receipt_text(receipt: ReceiptData) -> str:
         _divider(),
         _center_text("MEASUREMENTS"),
         _divider(),
+        _compact_measurement_line("BMI", receipt.bmi_value, receipt.bmi_label),
+        _compact_measurement_line("Blood Pressure", receipt.blood_pressure_value, receipt.blood_pressure_label),
+        _compact_measurement_line("SpO2", receipt.spo2, receipt.spo2_label),
+        _compact_measurement_line("Heart Rate", receipt.heart_rate, receipt.heart_rate_label),
+        _divider(),
     ]
-
-    lines.extend(_measure_block("BMI", receipt.bmi_value, receipt.bmi_label))
-    lines.extend(_measure_block("Blood Pressure", receipt.blood_pressure_value, receipt.blood_pressure_label))
-    lines.extend(_measure_block("SpO2", receipt.spo2, receipt.spo2_label))
-    lines.extend(_measure_block("Heart Rate", receipt.heart_rate, receipt.heart_rate_label))
-    lines.extend(
-        [
-        _kv_line("Risk Level", _safe_text(receipt.risk_level)),
-        ]
-    )
 
     lines.extend(_build_qr_placeholder_block(receipt.qr_data))
     lines.extend(
@@ -361,7 +353,6 @@ def test_print(device_path: str | None = None) -> None:
         spo2_label="Normal",
         heart_rate="72 bpm",
         heart_rate_label="Normal",
-        risk_level="Low",
         qr_data="TEST-QR-PLACEHOLDER",
     )
     print_receipt_data(sample, device_path=device_path)
