@@ -4,45 +4,55 @@
   <div class="bg-white dark:bg-zinc-900 rounded-[28px] shadow-[0_24px_60px_rgba(108,74,182,0.10)] border border-primary/10 p-4 md:p-5 lg:p-6 h-full flex flex-col gap-4 overflow-hidden">
     {% include "kiosk/partials/step_header.html" with step_label="STEP 3 OF 6" active_step=3 title="Height & Weight Entry" subtitle="Height is captured automatically. Enter weight manually." %}
 
-    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.82fr)] gap-4 flex-1 min-h-0 items-stretch">
-      <section class="rounded-[26px] border border-primary/10 bg-[#fbf9fe] dark:bg-zinc-950 p-5 md:p-6 flex flex-col justify-between min-h-0">
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <p class="text-xs font-bold uppercase tracking-[0.22em] text-primary">USB Sensor</p>
-            <h2 class="mt-2 text-xl md:text-2xl font-black tracking-tight text-[#141019] dark:text-white">Height</h2>
-          </div>
-          <div id="height_status_badge" class="rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-4 py-2 text-sm font-bold">
-            Waiting
-          </div>
-        </div>
-
-        <div class="flex-1 min-h-0 flex items-center justify-center text-center py-4">
-          <div>
-            <div class="flex items-end justify-center gap-3">
-              <span id="height_value" class="text-6xl md:text-7xl lg:text-[5.5rem] leading-none font-black tracking-tighter text-primary">175.0</span>
-              <span class="pb-2 text-xl md:text-2xl font-bold text-[#6f5b8b] dark:text-zinc-300">cm</span>
-            </div>
-            <p id="height_hint" class="mt-3 text-sm text-[#6f5b8b] dark:text-zinc-400">
-              Waiting for USB reading.
-            </p>
-          </div>
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(300px,0.78fr)_minmax(360px,1fr)] gap-4 flex-1 min-h-0 items-stretch">
+      <section class="rounded-[26px] border border-primary/10 bg-[#fbf9fe] dark:bg-zinc-950 p-5 md:p-6 flex flex-col justify-center min-h-0">
+        <div class="max-w-md">
+          <p class="text-xs font-bold uppercase tracking-[0.22em] text-primary">USB Sensor</p>
+          <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-[#141019] dark:text-white">Height & Weight</h2>
+          <p class="mt-3 text-sm md:text-base text-[#6f5b8b] dark:text-zinc-400">
+            Height comes from the Raspberry USB sensor. Weight is entered on the keypad.
+          </p>
         </div>
       </section>
 
-      <section class="min-h-0 flex flex-col rounded-[26px] border border-primary/10 bg-[#faf8fd] dark:bg-zinc-950 p-4 md:p-5 shadow-inner overflow-hidden">
-        <div>
-          <p class="text-xs font-bold uppercase tracking-[0.22em] text-primary">Manual Entry</p>
-          <h2 class="mt-2 text-xl md:text-2xl font-black tracking-tight text-[#141019] dark:text-white">Weight</h2>
-        </div>
+      <section class="min-h-0 flex flex-col gap-3 overflow-hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 shrink-0">
+          <div class="rounded-[24px] border border-primary/10 bg-white dark:bg-zinc-900 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-[0.22em] text-primary">USB Sensor</p>
+                <h2 class="mt-1 text-lg md:text-xl font-black tracking-tight text-[#141019] dark:text-white">Height</h2>
+              </div>
+              <div id="height_status_badge" class="rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-3 py-1.5 text-xs font-bold">
+                Waiting
+              </div>
+            </div>
 
-        <div id="weight_panel" class="mt-4 rounded-[24px] border border-primary/10 bg-white dark:bg-zinc-900 p-4 ring-4 ring-primary/15 shrink-0">
-          <div class="flex items-end justify-end gap-2">
-            <span id="weight_value" class="text-5xl md:text-6xl leading-none font-black tracking-tighter text-primary">72.4</span>
-            <span class="pb-1.5 text-lg md:text-xl font-bold text-[#6f5b8b] dark:text-zinc-300">kg</span>
+            <div class="mt-4 flex items-end justify-end gap-2">
+              <span id="height_value" class="text-5xl md:text-6xl leading-none font-black tracking-tighter text-primary">175.0</span>
+              <span class="pb-1.5 text-lg md:text-xl font-bold text-[#6f5b8b] dark:text-zinc-300">cm</span>
+            </div>
+            <p id="height_hint" class="mt-2 text-sm text-[#6f5b8b] dark:text-zinc-400">
+              Waiting for USB reading.
+            </p>
+          </div>
+
+          <div class="rounded-[24px] border border-primary/10 bg-[#faf8fd] dark:bg-zinc-950 p-4">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.22em] text-primary">Manual Entry</p>
+              <h2 class="mt-1 text-lg md:text-xl font-black tracking-tight text-[#141019] dark:text-white">Weight</h2>
+            </div>
+
+            <div id="weight_panel" class="mt-4 rounded-[20px] border border-primary/10 bg-white dark:bg-zinc-900 p-4 ring-4 ring-primary/15">
+              <div class="flex items-end justify-end gap-2">
+                <span id="weight_value" class="text-5xl md:text-6xl leading-none font-black tracking-tighter text-primary">72.4</span>
+                <span class="pb-1.5 text-lg md:text-xl font-bold text-[#6f5b8b] dark:text-zinc-300">kg</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="mt-3 flex-1 min-h-0">
+        <div class="flex-1 min-h-0">
           {% include "kiosk/partials/keypad_panel.html" with active_label_id="active_field_label" active_label="Entering weight" keypad_mode="decimal" %}
         </div>
       </section>
