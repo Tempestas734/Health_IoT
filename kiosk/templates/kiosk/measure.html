@@ -2,15 +2,111 @@
 {% block content %}
 <div class="w-full max-w-7xl h-full max-h-full overflow-hidden">
   <div class="bg-white dark:bg-zinc-900 rounded-[28px] shadow-[0_24px_60px_rgba(108,74,182,0.10)] border border-primary/10 p-4 md:p-5 lg:p-6 h-full flex flex-col gap-4 overflow-hidden">
-    {% include "kiosk/partials/step_header.html" with step_label="STEP 3 OF 6" active_step=3 title="Height & Weight Entry" subtitle="Select a field, then use the keypad to enter the measurement." %}
+    {% include "kiosk/partials/step_header.html" with step_label="STEP 3 OF 6" active_step=3 title="Height & Weight Entry" subtitle="Height is captured from the USB sensor on Raspberry Pi. Weight is entered manually." %}
 
-    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(300px,0.9fr)] gap-4 flex-1 min-h-0 items-stretch">
-      <div class="grid grid-rows-2 gap-3 min-h-0">
-        {% include "kiosk/partials/entry_panel.html" with panel_id="height_panel" field_name="height" icon_bg_class="bg-primary/10" icon_name="height" title="Height" subtitle="Tap to edit" unit="cm" value_id="height_value" initial_value="175" %}
-        {% include "kiosk/partials/entry_panel.html" with panel_id="weight_panel" field_name="weight" icon_bg_class="bg-primary/15" icon_name="monitor_weight" title="Weight" subtitle="Tap to edit" unit="kg" value_id="weight_value" initial_value="72.4" %}
-      </div>
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.85fr)] gap-4 flex-1 min-h-0 items-stretch">
+      <section class="min-h-0 grid grid-rows-[minmax(0,1fr)_auto] gap-4">
+        <div class="relative min-h-0 overflow-hidden rounded-[26px] border border-primary/10 bg-[radial-gradient(circle_at_top_left,_rgba(157,102,235,0.18),_transparent_45%),linear-gradient(160deg,_rgba(243,239,250,0.9),_rgba(255,255,255,0.96))] dark:bg-[radial-gradient(circle_at_top_left,_rgba(157,102,235,0.14),_transparent_45%),linear-gradient(160deg,_rgba(39,39,42,0.96),_rgba(24,24,27,0.98))] p-6 md:p-7 flex flex-col justify-between">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-zinc-800/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-primary shadow-sm">
+                <span class="material-symbols-outlined text-base">usb</span>
+                Raspberry USB Sensor
+              </div>
+              <h2 class="mt-4 text-2xl md:text-3xl font-black tracking-tight text-[#141019] dark:text-white">Automatic Height Capture</h2>
+              <p class="mt-2 max-w-xl text-sm md:text-base text-[#6f5b8b] dark:text-zinc-400">
+                Stand straight under the sensor. The Raspberry Pi receives the Arduino serial message and updates the height automatically.
+              </p>
+            </div>
+            <div id="height_status_badge" class="shrink-0 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-4 py-2 text-sm font-bold">
+              Waiting for sensor
+            </div>
+          </div>
 
-      {% include "kiosk/partials/keypad_panel.html" with active_label_id="active_field_label" active_label="Entering height" keypad_mode="decimal" %}
+          <div class="flex-1 min-h-0 flex flex-col items-center justify-center text-center">
+            <div class="absolute inset-x-10 top-1/2 h-28 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl"></div>
+            <div class="relative">
+              <p class="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f5b8b] dark:text-zinc-400">Detected Height</p>
+              <div class="mt-4 flex items-end justify-center gap-3">
+                <span id="height_value" class="text-7xl md:text-8xl lg:text-[7rem] leading-none font-black tracking-tighter text-primary">175.0</span>
+                <span class="pb-3 text-2xl md:text-3xl font-bold text-[#6f5b8b] dark:text-zinc-300">cm</span>
+              </div>
+              <p id="height_hint" class="mt-4 text-sm md:text-base text-[#6f5b8b] dark:text-zinc-400">
+                Latest USB reading will appear here.
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="rounded-2xl bg-white/80 dark:bg-zinc-800/80 border border-primary/10 p-4">
+              <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#6f5b8b] dark:text-zinc-400">Serial line</p>
+              <p id="serial_line_preview" class="mt-2 text-sm font-semibold text-[#141019] dark:text-white break-all">No data yet</p>
+            </div>
+            <div class="rounded-2xl bg-white/80 dark:bg-zinc-800/80 border border-primary/10 p-4">
+              <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#6f5b8b] dark:text-zinc-400">Sensor mode</p>
+              <p class="mt-2 text-sm font-semibold text-[#141019] dark:text-white">VL53L1X via Arduino</p>
+            </div>
+            <div class="rounded-2xl bg-white/80 dark:bg-zinc-800/80 border border-primary/10 p-4">
+              <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#6f5b8b] dark:text-zinc-400">Measurement source</p>
+              <p class="mt-2 text-sm font-semibold text-[#141019] dark:text-white">USB serial on Raspberry Pi</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-[24px] border border-primary/10 bg-[#fbf9fe] dark:bg-zinc-950 p-4 md:p-5 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-4 items-center">
+          <div>
+            <h3 class="text-lg font-bold text-[#141019] dark:text-white">Integration contract</h3>
+            <p class="mt-1 text-sm text-[#6f5b8b] dark:text-zinc-400">
+              The page accepts either a Raspberry-normalized height payload or a raw Arduino line like <span class="font-semibold text-primary">Received distance : 245 mm</span>.
+            </p>
+          </div>
+          <div class="rounded-2xl bg-white dark:bg-zinc-900 border border-primary/10 px-4 py-3 text-sm font-mono text-[#141019] dark:text-zinc-200">
+            window.applyArduinoLine(line)
+          </div>
+        </div>
+      </section>
+
+      <section class="min-h-0 flex flex-col rounded-[26px] border border-primary/10 bg-[#faf8fd] dark:bg-zinc-950 p-5 md:p-6 shadow-inner">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-primary">
+              <span class="material-symbols-outlined text-base">monitor_weight</span>
+              Manual entry
+            </div>
+            <h2 class="mt-4 text-2xl font-black tracking-tight text-[#141019] dark:text-white">Weight</h2>
+            <p class="mt-2 text-sm text-[#6f5b8b] dark:text-zinc-400">Enter the measured weight using the keypad.</p>
+          </div>
+          <button id="weight_panel" class="rounded-full bg-white dark:bg-zinc-900 border border-primary/10 px-4 py-2 text-sm font-bold text-primary shadow-sm" type="button" onclick="setActiveField('weight')">
+            Active field
+          </button>
+        </div>
+
+        <div class="mt-5 rounded-[24px] border border-primary/10 bg-white dark:bg-zinc-900 p-5">
+          <p class="text-xs font-bold uppercase tracking-[0.22em] text-[#6f5b8b] dark:text-zinc-400">Entered weight</p>
+          <div class="mt-3 flex items-end justify-end gap-2">
+            <span id="weight_value" class="text-6xl md:text-7xl leading-none font-black tracking-tighter text-primary">72.4</span>
+            <span class="pb-2 text-xl md:text-2xl font-bold text-[#6f5b8b] dark:text-zinc-300">kg</span>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-[24px] bg-white/80 dark:bg-zinc-900/80 border border-primary/10 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-semibold text-[#141019] dark:text-white">Shared keypad</p>
+            <span id="active_field_label" class="text-xs font-bold uppercase tracking-[0.18em] text-primary">Entering weight</span>
+          </div>
+
+          <div class="mt-4">
+            {% include "kiosk/partials/keypad_panel.html" with active_label_id="hidden_active_field_label" active_label="Entering weight" keypad_mode="decimal" %}
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-[24px] border border-dashed border-primary/20 bg-primary/5 p-4">
+          <p class="text-sm font-semibold text-[#141019] dark:text-white">USB bridge note</p>
+          <p class="mt-1 text-sm text-[#6f5b8b] dark:text-zinc-400">
+            The Python serial script runs on Raspberry Pi, reads the Arduino USB line, then forwards the parsed value to this screen.
+          </p>
+        </div>
+      </section>
     </div>
 
     <div id="msg" class="hidden text-sm text-red-600 dark:text-red-400 text-center shrink-0"></div>
@@ -27,46 +123,87 @@
 {% block scripts %}
 {% include "kiosk/partials/keypad_styles.html" %}
 <script>
-let activeField = "height";
+let activeField = "weight";
 const values = {
-  height: "175",
+  height: "175.0",
   weight: "72.4",
+};
+
+const sensorState = {
+  status: "waiting",
+  lastLine: "",
 };
 
 function setActiveField(field) {
   activeField = field;
-  document.getElementById("active_field_label").textContent = `Entering ${field === "height" ? "height" : "weight"}`;
-  document.getElementById("height_panel").classList.toggle("ring-4", field === "height");
-  document.getElementById("height_panel").classList.toggle("ring-primary/15", field === "height");
+  document.getElementById("active_field_label").textContent = `Entering ${field}`;
   document.getElementById("weight_panel").classList.toggle("ring-4", field === "weight");
   document.getElementById("weight_panel").classList.toggle("ring-primary/15", field === "weight");
 }
 
 function renderValues() {
-  document.getElementById("height_value").textContent = values.height || "0";
-  document.getElementById("weight_value").textContent = values.weight || "0";
+  document.getElementById("height_value").textContent = values.height || "0.0";
+  document.getElementById("weight_value").textContent = values.weight || "0.0";
+}
+
+function renderSensorState() {
+  const badge = document.getElementById("height_status_badge");
+  const hint = document.getElementById("height_hint");
+  const preview = document.getElementById("serial_line_preview");
+
+  preview.textContent = sensorState.lastLine || "No data yet";
+
+  if (sensorState.status === "ok") {
+    badge.className = "shrink-0 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-4 py-2 text-sm font-bold";
+    badge.textContent = "Sensor connected";
+    hint.textContent = "Height updated from the latest Raspberry USB reading.";
+    return;
+  }
+
+  if (sensorState.status === "error") {
+    badge.className = "shrink-0 rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300 px-4 py-2 text-sm font-bold";
+    badge.textContent = "Sensor error";
+    hint.textContent = "Check the Arduino USB connection and serial bridge on Raspberry Pi.";
+    return;
+  }
+
+  badge.className = "shrink-0 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-4 py-2 text-sm font-bold";
+  badge.textContent = "Waiting for sensor";
+  hint.textContent = "Latest USB reading will appear here.";
 }
 
 function clearActiveField() {
-  values[activeField] = "0";
+  if (activeField !== "weight") {
+    return;
+  }
+  values.weight = "0";
   renderValues();
 }
 
 function applyKey(key) {
-  let nextValue = values[activeField];
+  if (activeField !== "weight") {
+    return;
+  }
+
+  let nextValue = values.weight;
+
+  if (key === "clear") {
+    clearActiveField();
+    return;
+  }
 
   if (key === "backspace") {
     nextValue = nextValue.slice(0, -1);
-    values[activeField] = nextValue || "0";
+    values.weight = nextValue || "0";
     renderValues();
     return;
   }
 
   if (key === ".") {
-    if (activeField === "height" || nextValue.includes(".")) {
+    if (nextValue.includes(".")) {
       return;
     }
-    values[activeField] = nextValue === "0" ? "0." : `${nextValue}.`;
+    values.weight = nextValue === "0" ? "0." : `${nextValue}.`;
     renderValues();
     return;
   }
@@ -75,30 +212,58 @@ function applyKey(key) {
     return;
   }
 
-  if (nextValue === "0") {
-    nextValue = key;
-  } else {
-    nextValue += key;
-  }
-
-  if (activeField === "height") {
-    nextValue = nextValue.replace(/\D/g, "").slice(0, 3);
-    values[activeField] = nextValue || "0";
-  } else {
-    const [whole = "", decimal = ""] = nextValue.split(".");
-    const trimmedWhole = whole.slice(0, 3);
-    const trimmedDecimal = decimal.slice(0, 1);
-    values[activeField] = nextValue.includes(".")
-      ? `${trimmedWhole}.${trimmedDecimal}`
-      : trimmedWhole;
-  }
+  nextValue = nextValue === "0" ? key : `${nextValue}${key}`;
+  const [whole = "", decimal = ""] = nextValue.split(".");
+  const trimmedWhole = whole.slice(0, 3);
+  const trimmedDecimal = decimal.slice(0, 1);
+  values.weight = nextValue.includes(".")
+    ? `${trimmedWhole}.${trimmedDecimal}`
+    : trimmedWhole;
 
   renderValues();
 }
 
-document.querySelectorAll(".measure-key, .measure-key-secondary").forEach((button) => {
-  button.addEventListener("click", () => applyKey(button.dataset.key));
-});
+function updateHeightCm(heightCm, sourceText = "") {
+  const normalizedHeight = Number(heightCm);
+  if (!Number.isFinite(normalizedHeight) || normalizedHeight <= 0) {
+    sensorState.status = "error";
+    sensorState.lastLine = sourceText || sensorState.lastLine;
+    renderSensorState();
+    return;
+  }
+
+  values.height = normalizedHeight.toFixed(1);
+  sensorState.status = "ok";
+  sensorState.lastLine = sourceText || `HEIGHT_CM=${values.height}`;
+  renderValues();
+  renderSensorState();
+}
+
+function applyArduinoLine(line) {
+  const normalizedLine = String(line || "").trim();
+  if (!normalizedLine) {
+    return;
+  }
+
+  sensorState.lastLine = normalizedLine;
+
+  const serialDistanceMatch = normalizedLine.match(/Received distance\s*:\s*(\d+)\s*mm/i);
+  if (serialDistanceMatch) {
+    const distanceMm = Number(serialDistanceMatch[1]);
+    const distanceCm = distanceMm / 10;
+    updateHeightCm(distanceCm, normalizedLine);
+    return;
+  }
+
+  const heightMatch = normalizedLine.match(/HEIGHT_CM\s*[=:]\s*([0-9]+(?:\.[0-9]+)?)/i);
+  if (heightMatch) {
+    updateHeightCm(Number(heightMatch[1]), normalizedLine);
+    return;
+  }
+
+  sensorState.status = /error|timeout/i.test(normalizedLine) ? "error" : "waiting";
+  renderSensorState();
+}
 
 async function submitMeasurements() {
   const height = Number(values.height);
@@ -141,7 +306,15 @@ async function submitMeasurements() {
   location.href = "/blood-pressure";
 }
 
+document.querySelectorAll(".measure-key, .measure-key-secondary").forEach((button) => {
+  button.addEventListener("click", () => applyKey(button.dataset.key));
+});
+
+window.applyArduinoLine = applyArduinoLine;
+window.updateHeightMeasurement = updateHeightCm;
+
 renderValues();
-setActiveField("height");
+renderSensorState();
+setActiveField("weight");
 </script>
 {% endblock %}
