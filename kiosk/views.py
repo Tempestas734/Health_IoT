@@ -372,8 +372,12 @@ def api_height(request):
     return JsonResponse(
         {
             "height_mm": payload.get("height_mm"),
+            "height_cm": payload.get("height_cm"),
+            "distance_mm": payload.get("distance_mm"),
             "status": payload.get("status", "error"),
             "message": payload.get("message", ""),
+            "port": payload.get("port", ""),
+            "source_line": payload.get("source_line", ""),
         },
         status=200,
     )

@@ -88,6 +88,7 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
             "message": "pyserial n'est pas installe.",
             "height_mm": None,
             "height_cm": None,
+            "distance_mm": None,
             "source_line": "",
             "port": port,
         }
