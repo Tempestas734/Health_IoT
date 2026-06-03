@@ -17,9 +17,18 @@ class HardwareApiTests(SimpleTestCase):
     def test_api_vitals_raw_returns_sensor_payload(self):
         with patch(
             "kiosk.views.read_max30102_raw",
-            return_value={"red": 45670, "ir": 62000, "status": "ok"},
+            return_value={
+                "red": 45670,
+                "ir": 62000,
+                "heart_rate": 72,
+                "spo2": 98,
+                "status": "ok",
+            },
         ):
             response = self.client.get("/api/vitals/raw/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"red": 45670, "ir": 62000, "status": "ok"})
+        self.assertEqual(
+            response.json(),
+            {"red": 45670, "ir": 62000, "heart_rate": 72, "spo2": 98, "status": "ok"},
+        )
