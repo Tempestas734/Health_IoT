@@ -23,6 +23,9 @@
               <span class="pb-1 text-xl font-bold text-[#6f5b8b] dark:text-zinc-300">cm</span>
             </div>
             <p id="height_hint" class="mt-2 text-sm text-[#6f5b8b] dark:text-zinc-400">Waiting for USB reading.</p>
+            <button id="height_sensor_button" class="mt-4 inline-flex items-center justify-center rounded-full border border-primary/15 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/5 transition-colors" type="button" onclick="fetchHeightMeasurement()">
+              Lire la taille depuis le capteur
+            </button>
           </div>
 
           <div class="rounded-[22px] border border-primary/10 bg-white dark:bg-zinc-900 p-5">
@@ -66,6 +69,7 @@ const values = {
 
 const sensorState = {
   status: "waiting",
+  message: "Waiting for USB reading.",
 };
 
 function setActiveField(_) {}
@@ -82,20 +86,20 @@ function renderSensorState() {
   if (sensorState.status === "ok") {
     badge.className = "rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-3 py-1.5 text-xs font-bold";
     badge.textContent = "Connected";
-    hint.textContent = "Height updated from USB sensor.";
+    hint.textContent = sensorState.message || "Height updated from USB sensor.";
     return;
   }
 
   if (sensorState.status === "error") {
     badge.className = "rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300 px-3 py-1.5 text-xs font-bold";
     badge.textContent = "Error";
-    hint.textContent = "Check sensor connection.";
+    hint.textContent = sensorState.message || "Check sensor connection.";
     return;
   }
 
   badge.className = "rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-3 py-1.5 text-xs font-bold";
   badge.textContent = "Waiting";
-  hint.textContent = "Waiting for USB reading.";
+  hint.textContent = sensorState.message || "Waiting for USB reading.";
 }
 
 function clearActiveField() {
@@ -146,12 +150,14 @@ function updateHeightMeasurement(heightCm) {
   const normalizedHeight = Number(heightCm);
   if (!Number.isFinite(normalizedHeight) || normalizedHeight <= 0) {
     sensorState.status = "error";
+    sensorState.message = "Invalid height value from sensor.";
     renderSensorState();
     return;
   }
 
   values.height = normalizedHeight.toFixed(1);
   sensorState.status = "ok";
+  sensorState.message = "Height updated from USB sensor.";
   renderValues();
   renderSensorState();
 }
@@ -177,7 +183,53 @@ function applyArduinoLine(line) {
 
   if (/error|timeout/i.test(normalizedLine)) {
     sensorState.status = "error";
+    sensorState.message = normalizedLine;
     renderSensorState();
+  }
+}
+
+async function fetchHeightMeasurement() {
+  const button = document.getElementById("height_sensor_button");
+  button.disabled = true;
+  button.textContent = "Lecture en cours...";
+  try {
+    const response = await fetch("/api/height/", {
+      headers: { "Accept": "application/json" },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      sensorState.status = "error";
+      sensorState.message = "Unable to read height sensor.";
+      renderSensorState();
+      return;
+    }
+
+    const payload = await response.json();
+
+    if (payload.status === "ok" && payload.height_mm) {
+      sensorState.message = payload.message || "Height updated from USB sensor.";
+      updateHeightMeasurement(payload.height_mm / 10);
+      return;
+    }
+
+    if (payload.status === "error") {
+      sensorState.status = "error";
+      sensorState.message = payload.message || "Check sensor connection.";
+      renderSensorState();
+      return;
+    }
+
+    sensorState.status = "waiting";
+    sensorState.message = payload.message || "Waiting for USB reading.";
+    renderSensorState();
+  } catch (_) {
+    sensorState.status = "error";
+    sensorState.message = "Height sensor request failed.";
+    renderSensorState();
+  } finally {
+    button.disabled = false;
+    button.textContent = "Lire la taille depuis le capteur";
   }
 }
 

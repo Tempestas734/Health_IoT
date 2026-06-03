@@ -26,7 +26,9 @@ from .forms import (
 )
 from .persistence import get_screening_repository
 from .supabase import SupabaseServiceError
+from .services.max30102_reader import read_max30102_raw
 from .services.receipt_printer import build_receipt_text, print_receipt
+from .services.serial_height import read_height_measurement
 from .use_cases import (
     finalize_screening,
     persist_blood_pressure,
@@ -359,6 +361,26 @@ def result(request):
             "guest_profile": get_step_data(request.session, "guest"),
         },
     )
+
+
+def height_capture(request):
+    return JsonResponse(read_height_measurement(), status=200)
+
+
+def api_height(request):
+    payload = read_height_measurement()
+    return JsonResponse(
+        {
+            "height_mm": payload.get("height_mm"),
+            "status": payload.get("status", "error"),
+            "message": payload.get("message", ""),
+        },
+        status=200,
+    )
+
+
+def api_vitals_raw(request):
+    return JsonResponse(read_max30102_raw(), status=200)
 
 
 @require_POST
