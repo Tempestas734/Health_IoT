@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover - exercised via runtime environment
 DISTANCE_PATTERN = re.compile(r"DISTANCE\s*:\s*(\d+)", re.IGNORECASE)
 ERROR_PATTERN = re.compile(r"DISTANCE_ERROR|error|timeout", re.IGNORECASE)
 OUTLIER_THRESHOLD_MM = 300
+DEFAULT_SENSOR_HEIGHT_MM = 2000
 
 _height_filter = MovingAverageFilter(window_size=5)
 _last_distance_mm: int | None = None
@@ -44,6 +45,13 @@ def _serial_timeout() -> float:
         return 1.0
 
 
+def _sensor_height_mm() -> int:
+    try:
+        return int(os.getenv("HEIGHT_SENSOR_HEIGHT_MM", str(DEFAULT_SENSOR_HEIGHT_MM)))
+    except ValueError:
+        return DEFAULT_SENSOR_HEIGHT_MM
+
+
 def parse_height_line(line: str) -> float | None:
     normalized = (line or "").strip()
     if not normalized:
@@ -55,10 +63,24 @@ def parse_height_line(line: str) -> float | None:
     return float(int(distance_match.group(1)))
 
 
+def distance_to_height_mm(distance_mm: float | int, *, sensor_height_mm: int | None = None) -> int | None:
+    try:
+        measured_distance = int(round(float(distance_mm)))
+    except (TypeError, ValueError):
+        return None
+
+    ceiling_height = sensor_height_mm if sensor_height_mm is not None else _sensor_height_mm()
+    estimated_height = ceiling_height - measured_distance
+    if estimated_height <= 0:
+        return None
+    return estimated_height
+
+
 def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
     global _last_distance_mm
 
     port = _serial_port()
+    sensor_height_mm = _sensor_height_mm()
 
     if serial is None:
         return {
@@ -86,27 +108,48 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
                     with _lock:
                         rounded_distance = int(round(distance_mm))
                         if is_outlier(rounded_distance, _last_distance_mm, OUTLIER_THRESHOLD_MM):
+                            fallback_height_mm = distance_to_height_mm(
+                                _last_distance_mm,
+                                sensor_height_mm=sensor_height_mm,
+                            )
                             return {
                                 "status": "waiting",
                                 "message": "Valeur de distance ignoree car instable.",
-                                "height_mm": _last_distance_mm,
+                                "height_mm": fallback_height_mm,
                                 "height_cm": (
-                                    round(_last_distance_mm / 10, 1)
-                                    if _last_distance_mm is not None
+                                    round(fallback_height_mm / 10, 1)
+                                    if fallback_height_mm is not None
                                     else None
                                 ),
+                                "distance_mm": _last_distance_mm,
                                 "source_line": decoded_line,
                                 "port": port,
                             }
 
                         _last_distance_mm = rounded_distance
                         filtered_distance = int(round(_height_filter.add(rounded_distance)))
+                        estimated_height_mm = distance_to_height_mm(
+                            filtered_distance,
+                            sensor_height_mm=sensor_height_mm,
+                        )
+
+                    if estimated_height_mm is None:
+                        return {
+                            "status": "error",
+                            "message": "Distance invalide pour une hauteur de capteur a 2 m.",
+                            "height_mm": None,
+                            "height_cm": None,
+                            "distance_mm": filtered_distance,
+                            "source_line": decoded_line,
+                            "port": port,
+                        }
 
                     return {
                         "status": "ok",
                         "message": "Lecture de taille recue depuis Arduino.",
-                        "height_mm": filtered_distance,
-                        "height_cm": round(filtered_distance / 10, 1),
+                        "height_mm": estimated_height_mm,
+                        "height_cm": round(estimated_height_mm / 10, 1),
+                        "distance_mm": filtered_distance,
                         "source_line": decoded_line,
                         "port": port,
                     }
@@ -117,6 +160,7 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
                         "message": "Arduino non connecte ou capteur en erreur.",
                         "height_mm": None,
                         "height_cm": None,
+                        "distance_mm": None,
                         "source_line": decoded_line,
                         "port": port,
                     }
@@ -127,6 +171,7 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
             "message": str(exc) or "Arduino non connecte",
             "height_mm": None,
             "height_cm": None,
+            "distance_mm": None,
             "source_line": "",
             "port": port,
         }
@@ -136,6 +181,7 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
         "message": "Aucune lecture valide recue pour le moment.",
         "height_mm": None,
         "height_cm": None,
+        "distance_mm": None,
         "source_line": "",
         "port": port,
     }

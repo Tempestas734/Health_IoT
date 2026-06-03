@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from kiosk.services.serial_height import parse_height_line
+from kiosk.services.serial_height import distance_to_height_mm, parse_height_line
 
 
 class ParseHeightLineTests(SimpleTestCase):
@@ -12,3 +12,6 @@ class ParseHeightLineTests(SimpleTestCase):
 
     def test_returns_none_for_unknown_line(self):
         self.assertIsNone(parse_height_line("DISTANCE_ERROR"))
+
+    def test_converts_distance_to_height_with_two_meter_sensor(self):
+        self.assertEqual(distance_to_height_mm(523, sensor_height_mm=2000), 1477)
