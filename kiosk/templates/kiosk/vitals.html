@@ -1,43 +1,112 @@
 {% extends "kiosk/base.html" %}
 {% block content %}
 <div class="w-full max-w-7xl h-full max-h-full overflow-hidden">
-  <div class="bg-white dark:bg-zinc-900 rounded-[28px] shadow-[0_24px_60px_rgba(108,74,182,0.10)] border border-primary/10 p-4 md:p-5 lg:p-6 h-full flex flex-col gap-4 overflow-hidden">
-    {% include "kiosk/partials/step_header.html" with step_label="STEP 5 OF 6" active_step=5 title="Heart Rate & SpO2 Capture" subtitle="Use the MAX30102 sensor to read heart rate and oxygen saturation." %}
-
-    <div id="msg" class="hidden text-sm text-red-600 dark:text-red-400 text-center shrink-0"></div>
-    <div class="rounded-[22px] border border-primary/10 bg-[#faf8fd] dark:bg-zinc-950 px-5 py-4 shrink-0">
-      <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary">MAX30102</p>
-          <h3 class="mt-1 text-lg font-black text-[#141019] dark:text-white">Lecture capteur</h3>
-          <p id="raw_vitals_hint" class="mt-1 text-sm text-[#6f5b8b] dark:text-zinc-400">Mets ton doigt sur le capteur avant de cliquer sur "Lire le capteur".</p>
-        </div>
-        <div class="flex items-center gap-3">
-          <div id="max30102_status_badge" class="rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-3 py-1.5 text-xs font-bold">
-            Waiting
-          </div>
-          <button id="max30102_button" class="inline-flex items-center justify-center rounded-full border border-primary/15 px-4 py-2 text-sm font-bold text-primary hover:bg-primary/5 transition-colors" type="button" onclick="readRawVitals()">
-            Lire le capteur
-          </button>
-        </div>
+  <div class="bg-[#fcfbff] dark:bg-zinc-900 rounded-[34px] shadow-[0_30px_70px_rgba(84,48,156,0.12)] border border-primary/10 p-5 md:p-6 h-full flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between gap-4 shrink-0">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-[0.24em] text-primary">Step 5 of 6</p>
+        <h2 class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-[#1c1726] dark:text-white">Vitals Measurement</h2>
       </div>
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div class="rounded-[18px] border border-primary/10 bg-white dark:bg-zinc-900 px-4 py-3">
-          <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary">BPM</p>
-          <p id="estimated_heart_rate_value" class="mt-2 text-3xl font-black tracking-tight text-[#141019] dark:text-white">--</p>
-        </div>
-        <div class="rounded-[18px] border border-primary/10 bg-white dark:bg-zinc-900 px-4 py-3">
-          <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary">SpO2</p>
-          <p id="estimated_spo2_value" class="mt-2 text-3xl font-black tracking-tight text-[#141019] dark:text-white">--</p>
-        </div>
+      <div class="rounded-full bg-white/90 dark:bg-zinc-800 border border-primary/10 px-4 py-2 text-sm font-semibold text-[#6f5b8b] dark:text-zinc-300 shadow-sm">
+        MAX30102
       </div>
-      <p class="mt-3 text-xs font-medium text-[#6f5b8b] dark:text-zinc-400">Si les valeurs affichees ne sont pas logiques, refais une capture. Les champs restent modifiables manuellement.</p>
     </div>
-    <div class="flex justify-center shrink-0">
-      <button class="w-full max-w-2xl h-13 md:h-14 rounded-full text-white text-lg md:text-xl font-bold shadow-xl shadow-primary/30 hover:shadow-primary/40 active:scale-95 transition-all flex items-center justify-center gap-3 custom-gradient-bg" onclick="submitVitals()" type="button">
-        Confirm and Continue
-        <span class="material-symbols-outlined text-2xl">arrow_forward</span>
-      </button>
+
+    <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[0.95fr_1.15fr] gap-5 md:gap-8 items-stretch mt-5 overflow-hidden">
+      <section class="flex flex-col justify-center min-h-0">
+        <div class="max-w-md">
+          <p class="text-[clamp(2.2rem,5vw,4.4rem)] leading-[0.92] font-black tracking-[-0.04em] text-primary">Vitals<br>Capture</p>
+          <p class="mt-5 text-lg md:text-2xl leading-relaxed text-[#6f5b8b] dark:text-zinc-400">
+            Mets ton doigt sur le capteur, reste immobile quelques secondes, puis lance la lecture.
+          </p>
+        </div>
+
+        <div class="mt-8 rounded-[28px] border border-primary/10 bg-white/80 dark:bg-zinc-950/70 p-6 shadow-[0_20px_40px_rgba(84,48,156,0.08)]">
+          <div class="flex items-center gap-4">
+            <div class="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <span class="material-symbols-outlined text-[28px]">sensors</span>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-bold uppercase tracking-[0.22em] text-primary">Sensor Status</p>
+              <p id="raw_vitals_hint" class="mt-1 text-sm font-medium text-[#6f5b8b] dark:text-zinc-400">Pret pour une lecture MAX30102.</p>
+            </div>
+          </div>
+
+          <div class="mt-5 flex flex-wrap items-center gap-3">
+            <div id="max30102_status_badge" class="rounded-full bg-amber-100 text-amber-700 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]">
+              Waiting
+            </div>
+            <button id="max30102_button" class="inline-flex items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-primary/15 px-5 py-3 text-sm font-bold text-primary shadow-sm hover:bg-primary/5 transition-colors disabled:opacity-60" type="button" onclick="readRawVitals()">
+              Lire le capteur
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-5 min-h-0">
+        <article class="rounded-[30px] bg-white dark:bg-zinc-950 border border-primary/10 p-6 md:p-7 shadow-[0_24px_48px_rgba(84,48,156,0.08)] flex flex-col justify-between min-h-[280px] md:min-h-[360px] transition-transform hover:-translate-y-1">
+          <div>
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="text-xs font-bold uppercase tracking-[0.18em] text-[#7c738a] dark:text-zinc-400">SPO2 Reading</h3>
+              <div class="flex items-center gap-2 rounded-full bg-amber-100/70 text-amber-800 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em]">
+                <span class="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span id="spo2_capture_label">Capturing...</span>
+              </div>
+            </div>
+            <div class="mt-10 flex items-end gap-3">
+              <span id="estimated_spo2_value" class="text-[clamp(4rem,9vw,6rem)] leading-none font-black tracking-[-0.06em] text-[#1c1726] dark:text-white">--</span>
+              <span class="pb-2 text-4xl font-bold text-[#a39aaf] dark:text-zinc-500">%</span>
+            </div>
+          </div>
+          <div class="mt-6 h-28 rounded-[22px] bg-[linear-gradient(135deg,rgba(84,48,156,0.08),rgba(108,74,182,0.18))] border border-primary/10 relative overflow-hidden">
+            <div class="absolute inset-x-5 top-1/2 -translate-y-1/2 h-[2px] bg-primary/15"></div>
+            <div class="absolute inset-x-4 bottom-6 flex items-end gap-2 opacity-70">
+              <span class="h-6 w-5 rounded-full bg-primary/10"></span>
+              <span class="h-10 w-5 rounded-full bg-primary/15"></span>
+              <span class="h-14 w-5 rounded-full bg-primary/20"></span>
+              <span class="h-9 w-5 rounded-full bg-primary/15"></span>
+              <span class="h-16 w-5 rounded-full bg-primary/25"></span>
+              <span class="h-11 w-5 rounded-full bg-primary/20"></span>
+              <span class="h-7 w-5 rounded-full bg-primary/10"></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="rounded-[30px] bg-white dark:bg-zinc-950 border border-primary/10 p-6 md:p-7 shadow-[0_24px_48px_rgba(84,48,156,0.08)] flex flex-col justify-between min-h-[280px] md:min-h-[360px] transition-transform hover:-translate-y-1">
+          <div>
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="text-xs font-bold uppercase tracking-[0.18em] text-[#7c738a] dark:text-zinc-400">Heart Rate</h3>
+              <div class="flex items-center gap-2 rounded-full bg-amber-100/70 text-amber-800 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em]">
+                <span class="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span id="heart_capture_label">Capturing...</span>
+              </div>
+            </div>
+            <div class="mt-10 flex items-end gap-3">
+              <span id="estimated_heart_rate_value" class="text-[clamp(4rem,9vw,6rem)] leading-none font-black tracking-[-0.06em] text-[#1c1726] dark:text-white">--</span>
+              <span class="pb-2 text-4xl font-bold text-[#a39aaf] dark:text-zinc-500">BPM</span>
+            </div>
+          </div>
+          <div class="mt-6 h-28 rounded-[22px] bg-[linear-gradient(135deg,rgba(84,48,156,0.08),rgba(108,74,182,0.18))] border border-primary/10 relative overflow-hidden">
+            <svg viewBox="0 0 320 100" class="absolute inset-0 h-full w-full opacity-80">
+              <path d="M0 56 L28 56 L45 56 L62 24 L82 76 L102 40 L126 56 L150 56 L174 56 L194 30 L214 72 L236 46 L260 56 L320 56" fill="none" stroke="#6c4ab6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <div id="msg" class="hidden text-sm text-red-600 dark:text-red-400 text-center shrink-0 mt-4"></div>
+
+    <div class="mt-5 rounded-t-[30px] border-t border-primary/10 bg-white/80 dark:bg-zinc-950/70 backdrop-blur-sm px-2 py-4 shrink-0">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <button class="w-full sm:w-auto min-w-[200px] h-14 rounded-full bg-[#f3f0fa] dark:bg-zinc-800 text-[#5f5770] dark:text-zinc-200 font-semibold px-8 hover:opacity-90 transition-opacity" onclick="location.href='/blood-pressure'" type="button">
+          Back
+        </button>
+        <button class="w-full sm:w-auto min-w-[260px] h-14 rounded-full text-white text-lg font-bold shadow-[0_18px_36px_rgba(84,48,156,0.28)] hover:shadow-[0_20px_40px_rgba(84,48,156,0.34)] active:scale-[0.98] transition-all flex items-center justify-center gap-3 bg-[linear-gradient(135deg,#54309c_0%,#6c4ab6_100%)]" onclick="submitVitals()" type="button">
+          Confirm and Continue
+          <span class="material-symbols-outlined text-2xl">arrow_forward</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -58,24 +127,32 @@ const max30102State = {
 function renderMax30102State() {
   const badge = document.getElementById("max30102_status_badge");
   const hint = document.getElementById("raw_vitals_hint");
+  const heartLabel = document.getElementById("heart_capture_label");
+  const spo2Label = document.getElementById("spo2_capture_label");
 
   if (max30102State.status === "ok") {
-    badge.className = "rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-3 py-1.5 text-xs font-bold";
+    badge.className = "rounded-full bg-emerald-100 text-emerald-700 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]";
     badge.textContent = "Connected";
     hint.textContent = max30102State.message;
+    heartLabel.textContent = "Captured";
+    spo2Label.textContent = "Captured";
     return;
   }
 
   if (max30102State.status === "error") {
-    badge.className = "rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300 px-3 py-1.5 text-xs font-bold";
+    badge.className = "rounded-full bg-red-100 text-red-700 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]";
     badge.textContent = "Error";
     hint.textContent = max30102State.message;
+    heartLabel.textContent = "Retry";
+    spo2Label.textContent = "Retry";
     return;
   }
 
-  badge.className = "rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-3 py-1.5 text-xs font-bold";
+  badge.className = "rounded-full bg-amber-100 text-amber-700 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]";
   badge.textContent = "Waiting";
   hint.textContent = max30102State.message;
+  heartLabel.textContent = "Capturing...";
+  spo2Label.textContent = "Capturing...";
 }
 
 function isLogicalVitals(heartRate, spo2) {
