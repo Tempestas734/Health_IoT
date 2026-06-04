@@ -208,6 +208,14 @@ function applyArduinoLine(line) {
     return;
   }
 
+  const frenchMeasurementMatch = normalizedLine.match(/Distance\s+mesur(?:ee|e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*\|\s*Taille\s+estim(?:ee|e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm/i);
+  if (frenchMeasurementMatch) {
+    const distanceMm = Number(frenchMeasurementMatch[1]) * 10;
+    const heightCm = Number(frenchMeasurementMatch[2]);
+    updateHeightMeasurement(heightCm, distanceMm);
+    return;
+  }
+
   const heightMatch = normalizedLine.match(/HEIGHT_CM\s*[=:]\s*([0-9]+(?:\.[0-9]+)?)/i);
   if (heightMatch) {
     updateHeightMeasurement(Number(heightMatch[1]), null);

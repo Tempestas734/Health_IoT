@@ -18,9 +18,16 @@ except ImportError:  # pragma: no cover - exercised via runtime environment
 
 
 DISTANCE_PATTERN = re.compile(r"DISTANCE\s*:\s*(\d+)", re.IGNORECASE)
-ERROR_PATTERN = re.compile(r"DISTANCE_ERROR|error|timeout", re.IGNORECASE)
+FRENCH_DISTANCE_CM_PATTERN = re.compile(
+    r"Distance\s+mesur(?:ee|e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm",
+    re.IGNORECASE,
+)
+ERROR_PATTERN = re.compile(r"DISTANCE_ERROR|erreur|error|timeout", re.IGNORECASE)
 OUTLIER_THRESHOLD_MM = 300
 DEFAULT_SENSOR_HEIGHT_MM = 2000
+DEFAULT_CALIBRATION_MM = 0
+MIN_VALID_HEIGHT_MM = 500
+MAX_VALID_HEIGHT_MM = 2200
 
 _height_filter = MovingAverageFilter(window_size=5)
 _last_distance_mm: int | None = None
@@ -28,14 +35,15 @@ _lock = Lock()
 
 
 def _serial_port() -> str:
-    return os.getenv("HEIGHT_SENSOR_PORT", "/dev/ttyACM0")
+    default_port = "COM3" if os.name == "nt" else "/dev/ttyACM0"
+    return os.getenv("HEIGHT_SENSOR_PORT", default_port)
 
 
 def _serial_baud_rate() -> int:
     try:
-        return int(os.getenv("HEIGHT_SENSOR_BAUD", "115200"))
+        return int(os.getenv("HEIGHT_SENSOR_BAUD", "9600"))
     except ValueError:
-        return 115200
+        return 9600
 
 
 def _serial_timeout() -> float:
@@ -52,15 +60,27 @@ def _sensor_height_mm() -> int:
         return DEFAULT_SENSOR_HEIGHT_MM
 
 
+def _calibration_mm() -> int:
+    try:
+        return int(os.getenv("HEIGHT_SENSOR_CALIBRATION_MM", str(DEFAULT_CALIBRATION_MM)))
+    except ValueError:
+        return DEFAULT_CALIBRATION_MM
+
+
 def parse_height_line(line: str) -> float | None:
     normalized = (line or "").strip()
     if not normalized:
         return None
 
     distance_match = DISTANCE_PATTERN.search(normalized)
-    if not distance_match:
-        return None
-    return float(int(distance_match.group(1)))
+    if distance_match:
+        return float(int(distance_match.group(1)))
+
+    french_distance_match = FRENCH_DISTANCE_CM_PATTERN.search(normalized)
+    if french_distance_match:
+        return float(french_distance_match.group(1)) * 10.0
+
+    return None
 
 
 def distance_to_height_mm(distance_mm: float | int, *, sensor_height_mm: int | None = None) -> int | None:
@@ -70,8 +90,8 @@ def distance_to_height_mm(distance_mm: float | int, *, sensor_height_mm: int | N
         return None
 
     ceiling_height = sensor_height_mm if sensor_height_mm is not None else _sensor_height_mm()
-    estimated_height = ceiling_height - measured_distance
-    if estimated_height <= 0:
+    estimated_height = ceiling_height - measured_distance + _calibration_mm()
+    if estimated_height < MIN_VALID_HEIGHT_MM or estimated_height > MAX_VALID_HEIGHT_MM:
         return None
     return estimated_height
 
