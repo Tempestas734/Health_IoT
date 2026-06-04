@@ -23,7 +23,7 @@ FRENCH_DISTANCE_CM_PATTERN = re.compile(
     re.IGNORECASE,
 )
 ERROR_PATTERN = re.compile(r"DISTANCE_ERROR|erreur|error|timeout", re.IGNORECASE)
-OUTLIER_THRESHOLD_MM = 300
+DEFAULT_OUTLIER_THRESHOLD_MM = 500
 DEFAULT_SENSOR_HEIGHT_MM = 2000
 DEFAULT_CALIBRATION_MM = 0
 MIN_VALID_HEIGHT_MM = 500
@@ -67,6 +67,13 @@ def _calibration_mm() -> int:
         return DEFAULT_CALIBRATION_MM
 
 
+def _outlier_threshold_mm() -> int:
+    try:
+        return int(os.getenv("HEIGHT_SENSOR_OUTLIER_THRESHOLD_MM", str(DEFAULT_OUTLIER_THRESHOLD_MM)))
+    except ValueError:
+        return DEFAULT_OUTLIER_THRESHOLD_MM
+
+
 def parse_height_line(line: str) -> float | None:
     normalized = (line or "").strip()
     if not normalized:
@@ -101,6 +108,7 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
 
     port = _serial_port()
     sensor_height_mm = _sensor_height_mm()
+    outlier_threshold_mm = _outlier_threshold_mm()
 
     if serial is None:
         return {
@@ -128,14 +136,14 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
                 if distance_mm is not None:
                     with _lock:
                         rounded_distance = int(round(distance_mm))
-                        if is_outlier(rounded_distance, _last_distance_mm, OUTLIER_THRESHOLD_MM):
+                        if is_outlier(rounded_distance, _last_distance_mm, outlier_threshold_mm):
                             fallback_height_mm = distance_to_height_mm(
                                 _last_distance_mm,
                                 sensor_height_mm=sensor_height_mm,
                             )
                             return {
                                 "status": "waiting",
-                                "message": "Valeur de distance ignoree car instable.",
+                                "message": "Mesure ignoree: variation de distance trop brusque.",
                                 "height_mm": fallback_height_mm,
                                 "height_cm": (
                                     round(fallback_height_mm / 10, 1)
