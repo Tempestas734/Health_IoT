@@ -4,12 +4,15 @@ import json
 
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .flow import (
     ASSESSMENT_RESULT_KEY,
+    CURRENT_STEP_KEY,
     begin_session,
+    combined_measurements,
     clear_downstream_step_data,
     first_incomplete_prerequisite,
     get_step_data,
@@ -29,6 +32,13 @@ from .supabase import SupabaseServiceError
 from .services.max30102_reader import read_max30102_raw
 from .services.receipt_printer import build_receipt_text, print_receipt
 from .services.serial_height import read_height_measurement
+from .services.session_pin import (
+    PIN_SESSION_KEY,
+    create_unique_session_pin,
+    get_session_snapshot,
+    normalize_session_pin,
+    publish_session_snapshot,
+)
 from .use_cases import (
     finalize_screening,
     persist_blood_pressure,
@@ -132,6 +142,24 @@ def _repository():
     return get_screening_repository()
 
 
+def _publish_professional_snapshot(session) -> None:
+    session_pin = session.get(PIN_SESSION_KEY)
+    session_id = session.get("session_id")
+    if not session_pin or not session_id:
+        return
+
+    snapshot = {
+        "session_pin": session_pin,
+        "session_id": session_id,
+        "current_step": session.get(CURRENT_STEP_KEY),
+        "guest_profile": get_step_data(session, "guest"),
+        "measurements": combined_measurements(session),
+        "symptoms": get_step_data(session, "symptoms"),
+        "assessment": session.get(ASSESSMENT_RESULT_KEY),
+    }
+    publish_session_snapshot(session_pin, snapshot)
+
+
 def home(request):
     return render(request, "kiosk/home.html")
 
@@ -158,9 +186,18 @@ def consent(request):
         return _service_error_response(request, "kiosk/consent.html", str(exc), context={"form": form})
 
     begin_session(request.session, str(guest_session["id"]))
+    request.session[PIN_SESSION_KEY] = create_unique_session_pin()
+    _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
-        return JsonResponse({"session_id": guest_session["id"]}, status=201)
+        return JsonResponse(
+            {
+                "session_id": guest_session["id"],
+                "session_pin": request.session[PIN_SESSION_KEY],
+                "professional_url": reverse("professional_lookup"),
+            },
+            status=201,
+        )
     return redirect("/guest")
 
 
@@ -193,6 +230,7 @@ def guest(request):
         )
 
     mark_step_complete(request.session, "guest", profile)
+    _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
         return JsonResponse({"status": "ok"}, status=201)
@@ -229,6 +267,7 @@ def measure(request):
 
     mark_step_complete(request.session, "measure", measurements)
     clear_downstream_step_data(request.session, "measure")
+    _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
         return JsonResponse({"status": "ok"}, status=200)
@@ -265,6 +304,7 @@ def blood_pressure(request):
 
     mark_step_complete(request.session, "blood_pressure", blood_pressure_data)
     clear_downstream_step_data(request.session, "blood_pressure")
+    _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
         return JsonResponse({"status": "ok"}, status=200)
@@ -301,6 +341,7 @@ def vitals(request):
 
     mark_step_complete(request.session, "vitals", vitals_data)
     clear_downstream_step_data(request.session, "vitals")
+    _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
         return JsonResponse({"status": "ok"}, status=200)
@@ -342,6 +383,7 @@ def symptoms(request):
 
     mark_step_complete(request.session, "symptoms", symptoms_data)
     request.session[ASSESSMENT_RESULT_KEY] = assessment
+    _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
         return JsonResponse(assessment, status=200)
@@ -359,6 +401,52 @@ def result(request):
         {
             "result": assessment,
             "guest_profile": get_step_data(request.session, "guest"),
+            "session_pin": request.session.get(PIN_SESSION_KEY),
+        },
+    )
+
+
+def professional_lookup(request):
+    requested_pin = normalize_session_pin(
+        request.POST.get("session_pin") or request.GET.get("pin")
+    )
+    snapshot = get_session_snapshot(requested_pin) if requested_pin else None
+    lookup_error = None
+
+    if (request.method == "POST" or request.GET.get("pin")) and not requested_pin:
+        lookup_error = "Enter a valid 6-digit session PIN."
+    elif requested_pin and snapshot is None:
+        lookup_error = "No active session was found for this PIN."
+
+    return render(
+        request,
+        "kiosk/professional.html",
+        {
+            "requested_pin": requested_pin or "",
+            "lookup_error": lookup_error,
+            "snapshot": snapshot,
+        },
+    )
+
+
+def professional_result(request, session_pin: str):
+    normalized_pin = normalize_session_pin(session_pin)
+    snapshot = get_session_snapshot(normalized_pin) if normalized_pin else None
+    if not snapshot:
+        return redirect(f"{reverse('professional_lookup')}?pin={session_pin}")
+
+    assessment = snapshot.get("assessment")
+    if not assessment:
+        return redirect(f"{reverse('professional_lookup')}?pin={normalized_pin}")
+
+    return render(
+        request,
+        "kiosk/result.html",
+        {
+            "result": assessment,
+            "guest_profile": snapshot.get("guest_profile"),
+            "session_pin": normalized_pin,
+            "professional_view": True,
         },
     )
 

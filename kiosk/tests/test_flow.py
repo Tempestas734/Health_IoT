@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.test import Client
 
 from kiosk.supabase import SupabaseServiceError
 
@@ -113,6 +114,8 @@ class ScreeningFlowTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(consent_response.status_code, 201)
+        self.assertRegex(consent_response.json()["session_pin"], r"^\d{6}$")
+        self.assertEqual(consent_response.json()["professional_url"], "/professional")
 
         guest_response = self.client.post(
             "/api/guest/profile",
@@ -162,6 +165,7 @@ class ScreeningFlowTests(TestCase):
         self.assertEqual(session["measurements"], {"height_cm": 175.0, "weight_kg": 72.4})
         self.assertEqual(session["blood_pressure"], {"systolic_bp": 118, "diastolic_bp": 76})
         self.assertEqual(session["vitals"], {"heart_rate": 72, "spo2": 98})
+        self.assertRegex(session["session_pin"], r"^\d{6}$")
         self.assertIn("assessment_result", session)
         self.assertIn("ai", session["assessment_result"])
         self.assertIn("final", session["assessment_result"])
@@ -169,9 +173,19 @@ class ScreeningFlowTests(TestCase):
         result_response = self.client.get("/result")
         self.assertEqual(result_response.status_code, 200)
         self.assertContains(result_response, "Your Health Results")
-        self.assertContains(result_response, "Risk Summary")
-        self.assertContains(result_response, "Recommended next step")
+        self.assertContains(result_response, "Session PIN")
+        self.assertContains(result_response, "Body Mass Index")
         self.assertEqual(result_response.context["result"]["final"]["urgency_label"], "routine")
+
+        professional_client = Client()
+        professional_response = professional_client.get(f"/professional/{session['session_pin']}")
+        self.assertEqual(professional_response.status_code, 200)
+        self.assertContains(professional_response, "Professional Review")
+        self.assertContains(professional_response, session["session_pin"])
+        self.assertEqual(
+            professional_response.context["result"]["final"]["urgency_label"],
+            "routine",
+        )
 
     def test_changing_measurements_clears_dependent_session_data(self):
         session = self.client.session

@@ -1,0 +1,127 @@
+{% extends "kiosk/base.html" %}
+{% block content %}
+<main class="w-full max-w-6xl h-full mx-auto flex flex-col gap-4">
+  <section class="pt-2">
+    <p class="text-xs font-bold uppercase tracking-[0.24em] text-primary">Professional Review</p>
+    <h1 class="mt-1 text-3xl font-black tracking-tight text-[#141019] dark:text-white">Open Session by PIN</h1>
+    <p class="mt-2 max-w-2xl text-sm text-[#6f5b8b] dark:text-zinc-400">
+      Enter the 6-digit session PIN shown on the kiosk to review the same captured measurements and the final screening result.
+    </p>
+  </section>
+
+  <section class="grid grid-cols-1 lg:grid-cols-[0.72fr_1.28fr] gap-4 flex-1 min-h-0">
+    <form method="post" class="rounded-[20px] border border-primary/10 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+      {% csrf_token %}
+      <label for="session_pin" class="text-xs font-bold uppercase tracking-[0.18em] text-[#7c738a] dark:text-zinc-400">Session PIN</label>
+      <input
+        id="session_pin"
+        name="session_pin"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="6"
+        value="{{ requested_pin }}"
+        class="mt-3 h-14 w-full rounded-2xl border border-primary/15 bg-[#fcfbff] dark:bg-zinc-950 px-4 text-3xl font-black tracking-[0.35em] text-center text-[#141019] dark:text-white outline-none focus:border-primary"
+        placeholder="000000"
+      >
+      {% if lookup_error %}
+      <p class="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{{ lookup_error }}</p>
+      {% else %}
+      <p class="mt-3 text-sm text-[#6f5b8b] dark:text-zinc-400">Use the PIN generated for the active screening session.</p>
+      {% endif %}
+
+      <div class="mt-5 flex gap-3">
+        <button type="submit" class="min-w-[180px] h-11 rounded-full bg-[linear-gradient(135deg,#54309c_0%,#6c4ab6_100%)] px-5 text-sm font-bold text-white shadow-[0_16px_30px_rgba(84,48,156,0.26)]">
+          Open Session
+        </button>
+        <button type="button" onclick="location.href='/'" class="min-w-[140px] h-11 rounded-full border border-primary/15 bg-white dark:bg-zinc-950 px-5 text-sm font-semibold text-primary">
+          Back Home
+        </button>
+      </div>
+    </form>
+
+    <section class="rounded-[20px] border border-primary/10 bg-white/85 dark:bg-zinc-900 p-5 shadow-sm min-h-[420px]">
+      {% if snapshot %}
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary">Session {{ snapshot.session_pin }}</p>
+          <h2 class="mt-1 text-2xl font-black tracking-tight text-[#141019] dark:text-white">
+            {% if snapshot.assessment %}Result ready{% else %}Capture in progress{% endif %}
+          </h2>
+        </div>
+        <div class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] {% if snapshot.assessment %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+          {% if snapshot.assessment %}Complete{% else %}{{ snapshot.current_step|default:"active" }}{% endif %}
+        </div>
+      </div>
+
+      <div class="mt-5 grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">Sex</p>
+          <p class="mt-2 text-xl font-black text-[#141019] dark:text-white">{{ snapshot.guest_profile.sex|default:"--" }}</p>
+        </div>
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">Age</p>
+          <p class="mt-2 text-xl font-black text-[#141019] dark:text-white">{{ snapshot.guest_profile.age|default:"--" }}</p>
+        </div>
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">Session ID</p>
+          <p class="mt-2 text-sm font-bold text-[#141019] dark:text-white break-all">{{ snapshot.session_id }}</p>
+        </div>
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">Height</p>
+          <p class="mt-2 text-xl font-black text-[#141019] dark:text-white">{{ snapshot.measurements.height_cm|default:"--" }} <span class="text-sm font-bold text-[#7c738a] dark:text-zinc-400">cm</span></p>
+        </div>
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">Weight</p>
+          <p class="mt-2 text-xl font-black text-[#141019] dark:text-white">{{ snapshot.measurements.weight_kg|default:"--" }} <span class="text-sm font-bold text-[#7c738a] dark:text-zinc-400">kg</span></p>
+        </div>
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">Blood Pressure</p>
+          <p class="mt-2 text-xl font-black text-[#141019] dark:text-white">
+            {% if snapshot.measurements.systolic_bp and snapshot.measurements.diastolic_bp %}
+              {{ snapshot.measurements.systolic_bp }}/{{ snapshot.measurements.diastolic_bp }}
+            {% else %}
+              --
+            {% endif %}
+            <span class="text-sm font-bold text-[#7c738a] dark:text-zinc-400">mmHg</span>
+          </p>
+        </div>
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">Heart Rate</p>
+          <p class="mt-2 text-xl font-black text-[#141019] dark:text-white">{{ snapshot.measurements.heart_rate|default:"--" }} <span class="text-sm font-bold text-[#7c738a] dark:text-zinc-400">bpm</span></p>
+        </div>
+        <div class="rounded-2xl border border-primary/10 bg-[#fcfbff] dark:bg-zinc-950 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[#7c738a] dark:text-zinc-400">SpO2</p>
+          <p class="mt-2 text-xl font-black text-[#141019] dark:text-white">{{ snapshot.measurements.spo2|default:"--" }} <span class="text-sm font-bold text-[#7c738a] dark:text-zinc-400">%</span></p>
+        </div>
+      </div>
+
+      {% if snapshot.assessment %}
+      <div class="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Final screening result</p>
+          <p class="mt-1 text-sm text-emerald-800 dark:text-emerald-200">{{ snapshot.assessment.summary|default:"Assessment available." }}</p>
+        </div>
+        <a href="/professional/{{ snapshot.session_pin }}" class="inline-flex h-11 min-w-[180px] items-center justify-center rounded-full bg-emerald-600 px-5 text-sm font-bold text-white">
+          Open Detailed Result
+        </a>
+      </div>
+      {% else %}
+      <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+        This session is active. The professional result page will become available after the symptom step is completed on the kiosk.
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="h-full min-h-[360px] flex items-center justify-center text-center">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-primary">Waiting for PIN</p>
+          <h2 class="mt-2 text-2xl font-black tracking-tight text-[#141019] dark:text-white">No session selected</h2>
+          <p class="mt-2 max-w-md text-sm text-[#6f5b8b] dark:text-zinc-400">
+            Open a kiosk session first. The professional portal will show the same measurements and final assessment once the PIN is entered.
+          </p>
+        </div>
+      </div>
+      {% endif %}
+    </section>
+  </section>
+</main>
+{% endblock %}

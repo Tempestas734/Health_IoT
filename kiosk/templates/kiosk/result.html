@@ -2,8 +2,11 @@
 {% block content %}
 <main class="h-full flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
   <div class="text-center pt-1 shrink-0">
-    <h2 class="text-2xl md:text-3xl font-black tracking-tight text-[#141019] dark:text-white">Your Health Results</h2>
-    <p class="text-sm md:text-base text-slate-500 dark:text-zinc-400 mt-1 font-medium">Measurement successfully completed.</p>
+    <p class="text-xs font-bold uppercase tracking-[0.24em] text-primary">{% if professional_view %}Professional Review{% else %}Session Complete{% endif %}</p>
+    <h2 class="text-2xl md:text-3xl font-black tracking-tight text-[#141019] dark:text-white">{% if professional_view %}Patient Screening Result{% else %}Your Health Results{% endif %}</h2>
+    <p class="text-sm md:text-base text-slate-500 dark:text-zinc-400 mt-1 font-medium">
+      {% if session_pin %}Session PIN: <span class="font-bold text-primary">{{ session_pin }}</span>{% else %}Measurement successfully completed.{% endif %}
+    </p>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 max-w-5xl mx-auto w-full flex-1 min-h-0 items-start">
@@ -102,6 +105,7 @@
   </div>
 
   <div class="result-actions flex flex-col md:flex-row items-center justify-center gap-3 pt-1 max-w-5xl mx-auto w-full shrink-0">
+    {% if not professional_view %}
     <button id="print_results_button" class="action-button action-button-primary" onclick="printResultsDirectly()">
       Print Receipt
     </button>
@@ -111,6 +115,14 @@
     <button class="action-button action-button-secondary" onclick="location.href='/measure'">
       Back to Measures
     </button>
+    {% else %}
+    <button class="action-button action-button-accent" onclick="location.href='/professional?pin={{ session_pin }}'">
+      Back to Session
+    </button>
+    <button class="action-button action-button-secondary" onclick="location.href='/professional'">
+      Open Another PIN
+    </button>
+    {% endif %}
   </div>
 </main>
 {% endblock %}

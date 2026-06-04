@@ -12,6 +12,8 @@ urlpatterns = [
     path("symptoms", views.kiosk_symptoms, name="symptoms"),
     path("result", views.kiosk_result, name="result"),
     path("result/print", views.print_result, name="print_result"),
+    path("professional", views.professional_lookup, name="professional_lookup"),
+    path("professional/<str:session_pin>", views.professional_result, name="professional_result"),
 
     # API
     path("api/consent/start-session", views.start_session, name="api_start_session"),
