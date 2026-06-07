@@ -247,10 +247,15 @@ async function fetchHeightMeasurement() {
     }
 
     const payload = await response.json();
+    const heightCm = Number(payload.height_cm);
+    const heightMm = Number(payload.height_mm);
 
-    if (payload.status === "ok" && payload.height_mm) {
+    if (payload.status === "ok" && (Number.isFinite(heightCm) || Number.isFinite(heightMm))) {
       sensorState.message = payload.message || "Height updated from USB sensor.";
-      updateHeightMeasurement(payload.height_mm / 10, payload.distance_mm);
+      updateHeightMeasurement(
+        Number.isFinite(heightCm) ? heightCm : heightMm / 10,
+        payload.distance_mm
+      );
       return;
     }
 
