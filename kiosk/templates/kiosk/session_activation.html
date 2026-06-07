@@ -2,9 +2,9 @@
 {% block content %}
 <div class="w-full max-w-[760px] bg-white dark:bg-zinc-900 rounded-[28px] shadow-[0_24px_60px_rgba(84,48,156,0.12)] p-6 md:p-10 flex flex-col">
   <div class="text-center mb-6">
-    <p class="text-xs font-bold uppercase tracking-[0.24em] text-primary">Patient Session</p>
-    <h1 class="mt-2 text-[#141019] dark:text-white text-3xl md:text-4xl font-black tracking-tight">Activate Session by PIN</h1>
-    <p class="mt-2 text-[#6f5b8b] dark:text-zinc-400 text-sm md:text-base">Enter the prepared 6-digit PIN to activate a pending exam session on this device.</p>
+    <p class="text-xs font-bold uppercase tracking-[0.24em] text-primary">Health Professional</p>
+    <h1 class="mt-2 text-[#141019] dark:text-white text-3xl md:text-4xl font-black tracking-tight">Open Patient Session by PIN</h1>
+    <p class="mt-2 text-[#6f5b8b] dark:text-zinc-400 text-sm md:text-base">Enter the prepared 6-digit PIN to activate the pending patient session on this kiosk.</p>
   </div>
 
   <div class="rounded-[24px] border border-primary/10 bg-[linear-gradient(135deg,rgba(84,48,156,0.06),rgba(108,74,182,0.12))] p-5 md:p-6">
@@ -27,14 +27,14 @@
   >
     <span class="material-symbols-outlined mt-0.5 text-base">error</span>
     <div class="min-w-0">
-      <p class="font-bold uppercase tracking-[0.12em] text-[11px]">Session Error</p>
+      <p class="font-bold uppercase tracking-[0.12em] text-[11px]">Health Professional Error</p>
       <p id="msg_text" class="mt-1">{{ service_error|default:"" }}</p>
     </div>
   </div>
 
   <div class="mt-6">
     <button id="start_button" class="w-full py-4 custom-gradient-bg text-white rounded-full font-bold text-lg shadow-lg hover:shadow-primary/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed" onclick="startPatientSession()" type="button">
-      Activate Session
+      Open Patient Session
       <span class="material-symbols-outlined">arrow_forward</span>
     </button>
   </div>
@@ -97,7 +97,7 @@ async function startPatientSession() {
         const firstError = payload.errors[firstField]?.[0];
         detail = firstError?.message || "";
       }
-      setMessage(detail || "Unable to activate the session.");
+      setMessage(detail || "Unable to open the patient session.");
       return;
     }
 
