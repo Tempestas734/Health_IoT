@@ -50,13 +50,14 @@ class FakeRepository:
         self._record("save_guest_profile", payload)
         return payload
 
-    def save_measurements(self, *, session_id, height_cm, weight_kg, spo2=None):
+    def save_measurements(self, *, session_id, height_cm, weight_kg=None, spo2=None):
         payload = {
             "session_id": session_id,
             "height_cm": height_cm,
-            "weight_kg": weight_kg,
             "spo2": spo2,
         }
+        if weight_kg is not None:
+            payload["weight_kg"] = weight_kg
         self._record("save_measurements", payload)
         return [payload]
 
@@ -248,14 +249,14 @@ class ScreeningFlowTests(TestCase):
 
         response = self.client.post(
             "/api/professionnelle/capture/submit",
-            data='{"height": 175, "weight": 72.4, "heart_rate": 72, "spo2": 98}',
+            data='{"height": 175, "heart_rate": 72, "spo2": 98}',
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["next_path"], "/blood-pressure")
+        self.assertEqual(response.json()["next_path"], "/")
         refreshed_session = self.client.session
-        self.assertEqual(refreshed_session["measurements"], {"height_cm": 175.0, "weight_kg": 72.4})
+        self.assertEqual(refreshed_session["measurements"], {"height_cm": 175.0})
         self.assertEqual(refreshed_session["vitals"], {"heart_rate": 72, "spo2": 98})
 
     def test_changing_measurements_clears_dependent_session_data(self):

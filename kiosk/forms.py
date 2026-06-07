@@ -149,6 +149,22 @@ class MeasurementForm(forms.Form):
         return round(float(self.cleaned_data["weight_kg"]), 1)
 
 
+class HeightMeasurementForm(forms.Form):
+    height_cm = forms.FloatField(
+        min_value=50,
+        max_value=250,
+        error_messages={
+            "required": "Please enter height in centimeters.",
+            "invalid": "Height must be a valid number.",
+            "min_value": "Height must be at least 50 cm.",
+            "max_value": "Height must be 250 cm or less.",
+        },
+    )
+
+    def clean_height_cm(self) -> float:
+        return round(float(self.cleaned_data["height_cm"]), 1)
+
+
 class BloodPressureForm(forms.Form):
     systolic_bp = forms.IntegerField(
         min_value=60,

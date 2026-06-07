@@ -178,7 +178,7 @@ function applyKey(key) {
 
 function updateHeightMeasurement(heightCm, distanceMm = null) {
   const normalizedHeight = Number(heightCm);
-  if (!Number.isFinite(normalizedHeight) || normalizedHeight <= 0) {
+  if (!Number.isFinite(normalizedHeight)) {
     sensorState.status = "error";
     sensorState.message = "Invalid height value from sensor.";
     renderSensorState();

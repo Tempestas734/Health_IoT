@@ -259,7 +259,7 @@ def save_guest_profile(*, session_id, sex: str, age: int) -> dict:
     )
 
 
-def save_measurements(*, session_id, height_cm: float, weight_kg: float, spo2=None) -> list[dict]:
+def save_measurements(*, session_id, height_cm: float, weight_kg: float | None = None, spo2=None) -> list[dict]:
     normalized_session_id = _ensure_session_exists(session_id)
     saved_rows = [
         sb_insert(
@@ -270,17 +270,21 @@ def save_measurements(*, session_id, height_cm: float, weight_kg: float, spo2=No
                 "value": height_cm,
                 "unit": "cm",
             },
-        ),
-        sb_insert(
-            "measurements",
-            {
-                "session_id": normalized_session_id,
-                "type": "weight",
-                "value": weight_kg,
-                "unit": "kg",
-            },
-        ),
+        )
     ]
+
+    if weight_kg is not None:
+        saved_rows.append(
+            sb_insert(
+                "measurements",
+                {
+                    "session_id": normalized_session_id,
+                    "type": "weight",
+                    "value": weight_kg,
+                    "unit": "kg",
+                },
+            )
+        )
 
     if spo2 is not None:
         saved_rows.append(

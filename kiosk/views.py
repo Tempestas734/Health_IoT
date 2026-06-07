@@ -23,6 +23,7 @@ from .forms import (
     BloodPressureForm,
     ConsentForm,
     GuestForm,
+    HeightMeasurementForm,
     MeasurementForm,
     SessionActivationForm,
     SymptomForm,
@@ -344,7 +345,7 @@ def professional_capture(request):
 
     measurement_initial = get_step_data(request.session, "measure") or {}
     vitals_initial = get_step_data(request.session, "vitals") or {}
-    measurement_form = MeasurementForm(initial=measurement_initial)
+    measurement_form = HeightMeasurementForm(initial=measurement_initial)
     vitals_form = VitalsForm(initial=vitals_initial)
     if request.method != "POST":
         return render(
@@ -357,7 +358,7 @@ def professional_capture(request):
         )
 
     payload = _request_data(request)
-    measurement_form = MeasurementForm(payload)
+    measurement_form = HeightMeasurementForm(payload)
     vitals_form = VitalsForm(payload)
 
     if not measurement_form.is_valid():
@@ -402,8 +403,8 @@ def professional_capture(request):
     _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
-        return JsonResponse({"status": "ok", "next_path": "/blood-pressure"}, status=200)
-    return redirect("/blood-pressure")
+        return JsonResponse({"status": "ok", "next_path": "/"}, status=200)
+    return redirect("/")
 
 
 def blood_pressure(request):

@@ -16,7 +16,14 @@ class ScreeningRepository(Protocol):
         device_id: str,
     ) -> dict: ...
     def save_guest_profile(self, *, session_id: str, sex: str, age: int) -> dict: ...
-    def save_measurements(self, *, session_id: str, height_cm: float, weight_kg: float, spo2=None) -> list[dict]: ...
+    def save_measurements(
+        self,
+        *,
+        session_id: str,
+        height_cm: float,
+        weight_kg: float | None = None,
+        spo2=None,
+    ) -> list[dict]: ...
     def save_blood_pressure(self, *, session_id: str, systolic_bp: int, diastolic_bp: int) -> list[dict]: ...
     def save_vitals(self, *, session_id: str, heart_rate: int, spo2=None) -> list[dict]: ...
     def save_symptoms(
@@ -60,7 +67,14 @@ class SupabaseScreeningRepository:
     def save_guest_profile(self, *, session_id: str, sex: str, age: int) -> dict:
         return supabase.save_guest_profile(session_id=session_id, sex=sex, age=age)
 
-    def save_measurements(self, *, session_id: str, height_cm: float, weight_kg: float, spo2=None) -> list[dict]:
+    def save_measurements(
+        self,
+        *,
+        session_id: str,
+        height_cm: float,
+        weight_kg: float | None = None,
+        spo2=None,
+    ) -> list[dict]:
         return supabase.save_measurements(
             session_id=session_id,
             height_cm=height_cm,
