@@ -7,9 +7,9 @@ class SupabaseServiceError(RuntimeError):
     """Raised when a Supabase data-access operation fails."""
 
 
-PIN_NOT_FOUND_MESSAGE = "No pending session was found for this PIN."
-PIN_ALREADY_ACTIVE_MESSAGE = "This session PIN is already active."
-PIN_INVALID_STATUS_MESSAGE = "This session cannot be activated from its current status."
+PIN_NOT_FOUND_MESSAGE = "Aucune session en attente n'a ete trouvee pour ce PIN."
+PIN_ALREADY_ACTIVE_MESSAGE = "Cette session est deja active."
+PIN_INVALID_STATUS_MESSAGE = "Cette session ne peut pas etre activee depuis son statut actuel."
 
 
 def _get_supabase_settings() -> tuple[str, str]:
@@ -179,10 +179,72 @@ def activate_pending_session(
     data = response.json()
     updated_row = data[0] if isinstance(data, list) and data else None
     if not updated_row:
-        raise SupabaseServiceError("Session activation failed in Supabase.")
+        raise SupabaseServiceError(
+            "La session a ete trouvee mais n'a pas pu etre activee dans Supabase. "
+            "Verifiez les permissions UPDATE/RLS sur exam_sessions."
+        )
 
     updated_row["consent_id"] = consent["id"]
+    updated_row["device_id"] = device_id
     return updated_row
+
+
+def get_professional_snapshot(*, session_pin: str) -> dict | None:
+    response = _request(
+        "GET",
+        "exam_sessions",
+        params={
+            "session_pin": f"eq.{session_pin}",
+            "status": "eq.active",
+            "select": "id,patient_id,session_pin,status",
+            "order": "created_at.desc",
+            "limit": 1,
+        },
+    )
+    data = response.json()
+    session_row = data[0] if data else None
+    if not session_row:
+        return None
+
+    measurements: dict = {}
+    try:
+        response = _request(
+            "GET",
+            "measurements",
+            params={
+                "session_id": f"eq.{session_row['id']}",
+                "select": "type,value,unit",
+                "limit": 20,
+            },
+        )
+        for row in response.json():
+            measurement_type = row.get("type")
+            value = row.get("value")
+            if measurement_type == "height":
+                measurements["height_cm"] = value
+            elif measurement_type == "weight":
+                measurements["weight_kg"] = value
+            elif measurement_type == "systolic_bp":
+                measurements["systolic_bp"] = value
+            elif measurement_type == "diastolic_bp":
+                measurements["diastolic_bp"] = value
+            elif measurement_type == "heart_rate":
+                measurements["heart_rate"] = value
+            elif measurement_type == "spo2":
+                measurements["spo2"] = value
+    except SupabaseServiceError:
+        measurements = {}
+
+    return {
+        "session_pin": session_pin,
+        "session_id": session_row["id"],
+        "patient_id": session_row.get("patient_id"),
+        "current_step": session_row.get("status"),
+        "guest_profile": {},
+        "measurements": measurements,
+        "symptoms": None,
+        "assessment": None,
+    }
 
 
 def save_guest_profile(*, session_id, sex: str, age: int) -> dict:

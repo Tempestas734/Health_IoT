@@ -466,6 +466,11 @@ def professional_lookup(request):
         request.POST.get("session_pin") or request.GET.get("pin")
     )
     snapshot = get_session_snapshot(requested_pin) if requested_pin else None
+    if requested_pin and snapshot is None:
+        try:
+            snapshot = _repository().get_professional_snapshot(session_pin=requested_pin)
+        except SupabaseServiceError:
+            snapshot = None
     lookup_error = None
 
     if (request.method == "POST" or request.GET.get("pin")) and not requested_pin:
@@ -487,6 +492,11 @@ def professional_lookup(request):
 def professional_result(request, session_pin: str):
     normalized_pin = normalize_session_pin(session_pin)
     snapshot = get_session_snapshot(normalized_pin) if normalized_pin else None
+    if normalized_pin and snapshot is None:
+        try:
+            snapshot = _repository().get_professional_snapshot(session_pin=normalized_pin)
+        except SupabaseServiceError:
+            snapshot = None
     if not snapshot:
         return redirect(f"{reverse('professional_lookup')}?pin={session_pin}")
 

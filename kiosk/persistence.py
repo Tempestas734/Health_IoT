@@ -31,6 +31,7 @@ class ScreeningRepository(Protocol):
         fatigue: bool,
     ) -> dict: ...
     def save_assessment(self, *, session_id: str, assessment: dict) -> dict | None: ...
+    def get_professional_snapshot(self, *, session_pin: str) -> dict | None: ...
 
 
 class SupabaseScreeningRepository:
@@ -104,6 +105,9 @@ class SupabaseScreeningRepository:
 
     def save_assessment(self, *, session_id: str, assessment: dict) -> dict | None:
         return supabase.save_assessment(session_id=session_id, assessment=assessment)
+
+    def get_professional_snapshot(self, *, session_pin: str) -> dict | None:
+        return supabase.get_professional_snapshot(session_pin=session_pin)
 
 
 def get_screening_repository() -> ScreeningRepository:

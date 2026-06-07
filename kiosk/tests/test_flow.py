@@ -3,7 +3,12 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.test import Client
 
-from kiosk.supabase import SupabaseServiceError
+from kiosk.supabase import (
+    PIN_ALREADY_ACTIVE_MESSAGE,
+    PIN_INVALID_STATUS_MESSAGE,
+    PIN_NOT_FOUND_MESSAGE,
+    SupabaseServiceError,
+)
 
 
 class FakeRepository:
@@ -81,6 +86,22 @@ class FakeRepository:
         payload = {"session_id": session_id, "assessment": assessment}
         self._record("save_assessment", payload)
         return payload
+
+    def get_professional_snapshot(self, *, session_pin):
+        payload = {"session_pin": session_pin}
+        self._record("get_professional_snapshot", payload)
+        if session_pin != "157021":
+            return None
+        return {
+            "session_pin": session_pin,
+            "session_id": "session-active-1",
+            "patient_id": "patient-lookup-1",
+            "current_step": "active",
+            "guest_profile": {},
+            "measurements": {"height_cm": 170, "weight_kg": 70},
+            "symptoms": None,
+            "assessment": None,
+        }
 
 
 class ScreeningFlowTests(TestCase):
@@ -227,3 +248,19 @@ class ScreeningFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 502)
         self.assertEqual(response.json()["error"], "save_guest_profile failed")
+
+    def test_pin_activation_messages_are_user_facing(self):
+        self.assertEqual(PIN_NOT_FOUND_MESSAGE, "Aucune session en attente n'a ete trouvee pour ce PIN.")
+        self.assertEqual(PIN_ALREADY_ACTIVE_MESSAGE, "Cette session est deja active.")
+        self.assertEqual(
+            PIN_INVALID_STATUS_MESSAGE,
+            "Cette session ne peut pas etre activee depuis son statut actuel.",
+        )
+
+    def test_professional_lookup_uses_repository_when_cache_is_empty(self):
+        with patch("kiosk.views.get_session_snapshot", return_value=None):
+            response = self.client.get("/professional?pin=157021")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Session 157021")
+        self.assertContains(response, "session-active-1")
