@@ -169,11 +169,11 @@ def consent(request):
         initial={"terms_version": "v1", "language": "fr", "device_id": "DEV-PI-001"}
     )
     if request.method != "POST":
-        return render(request, "kiosk/consent.html", {"form": form})
+        return render(request, "kiosk/guest_mode/consent.html", {"form": form})
 
     form = ConsentForm(_request_data(request))
     if not form.is_valid():
-        return _form_error_response(request, form, "kiosk/consent.html")
+        return _form_error_response(request, form, "kiosk/guest_mode/consent.html")
 
     try:
         guest_session = start_guest_screening(
@@ -183,7 +183,7 @@ def consent(request):
             device_id=form.cleaned_data["device_id"],
         )
     except SupabaseServiceError as exc:
-        return _service_error_response(request, "kiosk/consent.html", str(exc), context={"form": form})
+        return _service_error_response(request, "kiosk/guest_mode/consent.html", str(exc), context={"form": form})
 
     begin_session(request.session, str(guest_session["id"]))
     request.session[PIN_SESSION_KEY] = create_unique_session_pin()
@@ -208,11 +208,11 @@ def guest(request):
 
     form = GuestForm(initial=get_step_data(request.session, "guest"))
     if request.method != "POST":
-        return render(request, "kiosk/guest.html", {"form": form})
+        return render(request, "kiosk/guest_mode/guest.html", {"form": form})
 
     form = GuestForm(_request_data(request))
     if not form.is_valid():
-        return _form_error_response(request, form, "kiosk/guest.html")
+        return _form_error_response(request, form, "kiosk/guest_mode/guest.html")
 
     profile = form.cleaned_data
     try:
@@ -224,7 +224,7 @@ def guest(request):
     except SupabaseServiceError as exc:
         return _service_error_response(
             request,
-            "kiosk/guest.html",
+            "kiosk/guest_mode/guest.html",
             str(exc),
             context={"form": form},
         )
@@ -244,11 +244,11 @@ def measure(request):
 
     form = MeasurementForm(initial=get_step_data(request.session, "measure"))
     if request.method != "POST":
-        return render(request, "kiosk/measure.html", {"form": form})
+        return render(request, "kiosk/guest_mode/measure.html", {"form": form})
 
     form = MeasurementForm(_request_data(request))
     if not form.is_valid():
-        return _form_error_response(request, form, "kiosk/measure.html")
+        return _form_error_response(request, form, "kiosk/guest_mode/measure.html")
 
     measurements = form.cleaned_data
     try:
@@ -260,7 +260,7 @@ def measure(request):
     except SupabaseServiceError as exc:
         return _service_error_response(
             request,
-            "kiosk/measure.html",
+            "kiosk/guest_mode/measure.html",
             str(exc),
             context={"form": form},
         )
@@ -281,11 +281,11 @@ def blood_pressure(request):
 
     form = BloodPressureForm(initial=get_step_data(request.session, "blood_pressure"))
     if request.method != "POST":
-        return render(request, "kiosk/blood_pressure.html", {"form": form})
+        return render(request, "kiosk/guest_mode/blood_pressure.html", {"form": form})
 
     form = BloodPressureForm(_request_data(request))
     if not form.is_valid():
-        return _form_error_response(request, form, "kiosk/blood_pressure.html")
+        return _form_error_response(request, form, "kiosk/guest_mode/blood_pressure.html")
 
     blood_pressure_data = form.cleaned_data
     try:
@@ -297,7 +297,7 @@ def blood_pressure(request):
     except SupabaseServiceError as exc:
         return _service_error_response(
             request,
-            "kiosk/blood_pressure.html",
+            "kiosk/guest_mode/blood_pressure.html",
             str(exc),
             context={"form": form},
         )
@@ -318,11 +318,11 @@ def vitals(request):
 
     form = VitalsForm(initial=get_step_data(request.session, "vitals"))
     if request.method != "POST":
-        return render(request, "kiosk/vitals.html", {"form": form})
+        return render(request, "kiosk/guest_mode/vitals.html", {"form": form})
 
     form = VitalsForm(_request_data(request))
     if not form.is_valid():
-        return _form_error_response(request, form, "kiosk/vitals.html")
+        return _form_error_response(request, form, "kiosk/guest_mode/vitals.html")
 
     vitals_data = form.cleaned_data
     try:
@@ -334,7 +334,7 @@ def vitals(request):
     except SupabaseServiceError as exc:
         return _service_error_response(
             request,
-            "kiosk/vitals.html",
+            "kiosk/guest_mode/vitals.html",
             str(exc),
             context={"form": form},
         )
@@ -360,11 +360,11 @@ def symptoms(request):
 
     form = SymptomForm(initial=initial)
     if request.method != "POST":
-        return render(request, "kiosk/symptoms.html", {"form": form})
+        return render(request, "kiosk/guest_mode/symptoms.html", {"form": form})
 
     form = SymptomForm(_request_data(request))
     if not form.is_valid():
-        return _form_error_response(request, form, "kiosk/symptoms.html")
+        return _form_error_response(request, form, "kiosk/guest_mode/symptoms.html")
 
     symptoms_data = form.cleaned_data
     try:
@@ -376,7 +376,7 @@ def symptoms(request):
     except SupabaseServiceError as exc:
         return _service_error_response(
             request,
-            "kiosk/symptoms.html",
+            "kiosk/guest_mode/symptoms.html",
             str(exc),
             context={"form": form},
         )
@@ -397,7 +397,7 @@ def result(request):
 
     return render(
         request,
-        "kiosk/result.html",
+        "kiosk/guest_mode/result.html",
         {
             "result": assessment,
             "guest_profile": get_step_data(request.session, "guest"),
@@ -441,7 +441,7 @@ def professional_result(request, session_pin: str):
 
     return render(
         request,
-        "kiosk/result.html",
+        "kiosk/guest_mode/result.html",
         {
             "result": assessment,
             "guest_profile": snapshot.get("guest_profile"),
