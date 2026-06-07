@@ -18,8 +18,16 @@ except ImportError:  # pragma: no cover - exercised via runtime environment
 
 
 DISTANCE_PATTERN = re.compile(r"DISTANCE\s*:\s*(\d+)", re.IGNORECASE)
+RECEIVED_DISTANCE_MM_PATTERN = re.compile(
+    r"Received\s+distance\s*:\s*(\d+)\s*mm",
+    re.IGNORECASE,
+)
 FRENCH_DISTANCE_CM_PATTERN = re.compile(
     r"Distance\s+mesur(?:ee|e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm",
+    re.IGNORECASE,
+)
+HEIGHT_CM_PATTERN = re.compile(
+    r"HEIGHT_CM\s*[=:]\s*([0-9]+(?:\.[0-9]+)?)",
     re.IGNORECASE,
 )
 ERROR_PATTERN = re.compile(r"DISTANCE_ERROR|erreur|error|timeout", re.IGNORECASE)
@@ -83,9 +91,18 @@ def parse_height_line(line: str) -> float | None:
     if distance_match:
         return float(int(distance_match.group(1)))
 
+    received_distance_match = RECEIVED_DISTANCE_MM_PATTERN.search(normalized)
+    if received_distance_match:
+        return float(int(received_distance_match.group(1)))
+
     french_distance_match = FRENCH_DISTANCE_CM_PATTERN.search(normalized)
     if french_distance_match:
         return float(french_distance_match.group(1)) * 10.0
+
+    height_match = HEIGHT_CM_PATTERN.search(normalized)
+    if height_match:
+        height_cm = float(height_match.group(1))
+        return float((_sensor_height_mm() + _calibration_mm()) - (height_cm * 10.0))
 
     return None
 

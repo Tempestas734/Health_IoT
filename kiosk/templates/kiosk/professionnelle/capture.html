@@ -217,14 +217,36 @@ async function fetchHeightMeasurement() {
       headers: { "Accept": "application/json" },
       cache: "no-store",
     });
-    const payload = await response.json();
-    if (payload.status === "ok" && payload.height_mm) {
-      sensorState.message = payload.message || "Height updated from USB sensor.";
-      updateHeightMeasurement(payload.height_mm / 10, payload.distance_mm);
+
+    if (!response.ok) {
+      sensorState.status = "error";
+      sensorState.message = "Unable to read height sensor.";
+      renderSensorState();
       return;
     }
-    sensorState.status = "error";
-    sensorState.message = payload.message || "Unable to read height sensor.";
+
+    const payload = await response.json();
+    const heightCm = Number(payload.height_cm);
+    const heightMm = Number(payload.height_mm);
+
+    if (payload.status === "ok" && (Number.isFinite(heightCm) || Number.isFinite(heightMm))) {
+      sensorState.message = payload.message || "Height updated from USB sensor.";
+      updateHeightMeasurement(
+        Number.isFinite(heightCm) ? heightCm : heightMm / 10,
+        payload.distance_mm
+      );
+      return;
+    }
+
+    if (payload.status === "error") {
+      sensorState.status = "error";
+      sensorState.message = payload.message || "Check sensor connection.";
+      renderSensorState();
+      return;
+    }
+
+    sensorState.status = "waiting";
+    sensorState.message = payload.message || "Waiting for USB reading.";
     renderSensorState();
   } catch (_) {
     sensorState.status = "error";
