@@ -30,6 +30,21 @@ class FakeRepository:
         self._record("create_guest_session", payload)
         return {"id": "session-123"}
 
+    def activate_pending_session(self, *, session_pin, terms_version, language, device_id):
+        payload = {
+            "session_pin": session_pin,
+            "terms_version": terms_version,
+            "language": language,
+            "device_id": device_id,
+        }
+        self._record("activate_pending_session", payload)
+        return {
+            "id": "session-patient-1",
+            "patient_id": "patient-1",
+            "consent_id": "consent-1",
+            "mode": "patient",
+        }
+
     def save_guest_profile(self, *, session_id, sex, age):
         payload = {"session_id": session_id, "sex": sex, "age": age}
         self._record("save_guest_profile", payload)
@@ -207,6 +222,41 @@ class ScreeningFlowTests(TestCase):
             professional_response.context["result"]["final"]["urgency_label"],
             "routine",
         )
+
+    def test_pin_activation_redirects_to_professionnelle_capture(self):
+        response = self.client.post(
+            "/api/session-activation/start-session",
+            data='{"session_pin": "563272", "device_id": "DEV-PI-001", "terms_version": "v1", "language": "fr"}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["next_path"], "/professionnelle/capture")
+        session = self.client.session
+        self.assertEqual(session["session_id"], "session-patient-1")
+        self.assertEqual(session["patient_id"], "patient-1")
+        self.assertEqual(session["current_step"], "measure")
+
+    def test_professionnelle_capture_submits_measurements_and_vitals(self):
+        session = self.client.session
+        session["session_id"] = "session-patient-1"
+        session["session_pin"] = "563272"
+        session["session_mode"] = "patient"
+        session["guest"] = {"patient_id": "patient-1", "mode": "patient"}
+        session["current_step"] = "measure"
+        session.save()
+
+        response = self.client.post(
+            "/api/professionnelle/capture/submit",
+            data='{"height": 175, "weight": 72.4, "heart_rate": 72, "spo2": 98}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["next_path"], "/blood-pressure")
+        refreshed_session = self.client.session
+        self.assertEqual(refreshed_session["measurements"], {"height_cm": 175.0, "weight_kg": 72.4})
+        self.assertEqual(refreshed_session["vitals"], {"heart_rate": 72, "spo2": 98})
 
     def test_changing_measurements_clears_dependent_session_data(self):
         session = self.client.session

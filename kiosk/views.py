@@ -203,6 +203,14 @@ def session_activation(request):
         request.session["patient_id"] = str(activated_session["patient_id"])
     request.session["consent_id"] = str(activated_session["consent_id"])
     request.session["session_mode"] = str(activated_session.get("mode") or "patient")
+    mark_step_complete(
+        request.session,
+        "guest",
+        {
+            "patient_id": request.session.get("patient_id"),
+            "mode": request.session["session_mode"],
+        },
+    )
     _publish_professional_snapshot(request.session)
 
     if _expects_json(request):
@@ -212,11 +220,11 @@ def session_activation(request):
                 "patient_id": activated_session.get("patient_id"),
                 "session_pin": request.session[PIN_SESSION_KEY],
                 "message": "Patient session activated.",
-                "next_path": "/guest",
+                "next_path": "/professionnelle/capture",
             },
             status=201,
         )
-    return redirect("/guest")
+    return redirect("/professionnelle/capture")
 
 
 def consent(request):
@@ -326,6 +334,75 @@ def measure(request):
 
     if _expects_json(request):
         return JsonResponse({"status": "ok"}, status=200)
+    return redirect("/blood-pressure")
+
+
+def professional_capture(request):
+    blocked_response = _ensure_step_available(request, "measure")
+    if blocked_response:
+        return blocked_response
+
+    measurement_initial = get_step_data(request.session, "measure") or {}
+    vitals_initial = get_step_data(request.session, "vitals") or {}
+    measurement_form = MeasurementForm(initial=measurement_initial)
+    vitals_form = VitalsForm(initial=vitals_initial)
+    if request.method != "POST":
+        return render(
+            request,
+            "kiosk/professionnelle/capture.html",
+            {
+                "form": measurement_form,
+                "vitals_form": vitals_form,
+            },
+        )
+
+    payload = _request_data(request)
+    measurement_form = MeasurementForm(payload)
+    vitals_form = VitalsForm(payload)
+
+    if not measurement_form.is_valid():
+        return _form_error_response(
+            request,
+            measurement_form,
+            "kiosk/professionnelle/capture.html",
+            context={"vitals_form": vitals_form},
+        )
+    if not vitals_form.is_valid():
+        return _form_error_response(
+            request,
+            vitals_form,
+            "kiosk/professionnelle/capture.html",
+            context={"form": measurement_form},
+        )
+
+    measurements = measurement_form.cleaned_data
+    vitals_data = vitals_form.cleaned_data
+    try:
+        persist_measurements(
+            _repository(),
+            session_id=request.session["session_id"],
+            measurements=measurements,
+        )
+        persist_vitals(
+            _repository(),
+            session_id=request.session["session_id"],
+            vitals=vitals_data,
+        )
+    except SupabaseServiceError as exc:
+        return _service_error_response(
+            request,
+            "kiosk/professionnelle/capture.html",
+            str(exc),
+            context={"form": measurement_form, "vitals_form": vitals_form},
+        )
+
+    mark_step_complete(request.session, "measure", measurements)
+    request.session["vitals"] = vitals_data
+    request.session[CURRENT_STEP_KEY] = "blood_pressure"
+    _publish_professional_snapshot(request.session)
+
+    if _expects_json(request):
+        return JsonResponse({"status": "ok", "next_path": "/blood-pressure"}, status=200)
     return redirect("/blood-pressure")
 
 
@@ -570,6 +647,12 @@ def start_session(request):
 @require_POST
 def start_pin_session(request):
     return session_activation(request)
+
+
+@csrf_exempt
+@require_POST
+def submit_professional_capture(request):
+    return professional_capture(request)
 
 
 @csrf_exempt

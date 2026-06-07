@@ -5,6 +5,7 @@ urlpatterns = [
     # UI pages
     path("", views.kiosk_home, name="home"),
     path("session-activation", views.kiosk_session_activation, name="session_activation"),
+    path("professionnelle/capture", views.professional_capture, name="professional_capture"),
     path("consent", views.kiosk_consent, name="consent"),
     path("guest", views.kiosk_guest, name="guest"),
     path("measure", views.kiosk_measure, name="measure"),
@@ -18,6 +19,7 @@ urlpatterns = [
 
     # API
     path("api/session-activation/start-session", views.start_pin_session, name="api_start_pin_session"),
+    path("api/professionnelle/capture/submit", views.submit_professional_capture, name="api_submit_professional_capture"),
     path("api/consent/start-session", views.start_session, name="api_start_session"),
     path("api/guest/profile", views.save_guest_profile, name="api_save_guest_profile"),
     path("api/measurements/height", views.height_capture, name="api_height_capture"),
