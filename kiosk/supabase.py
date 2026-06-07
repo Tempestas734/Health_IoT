@@ -7,6 +7,11 @@ class SupabaseServiceError(RuntimeError):
     """Raised when a Supabase data-access operation fails."""
 
 
+PIN_NOT_FOUND_MESSAGE = "No pending session was found for this PIN."
+PIN_ALREADY_ACTIVE_MESSAGE = "This session PIN is already active."
+PIN_INVALID_STATUS_MESSAGE = "This session cannot be activated from its current status."
+
+
 def _get_supabase_settings() -> tuple[str, str]:
     supabase_url = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
     anon_key = os.getenv("SUPABASE_ANON_KEY")
@@ -103,14 +108,18 @@ def sb_insert(table: str, payload: dict) -> dict:
     return data[0] if isinstance(data, list) and data else data
 
 
-def create_guest_session(*, terms_version: str, language: str, device_id: str) -> dict:
-    consent = sb_insert(
+def create_consent(*, terms_version: str, language: str) -> dict:
+    return sb_insert(
         "consents",
         {
             "terms_version": terms_version,
             "language": language,
         },
     )
+
+
+def create_guest_session(*, terms_version: str, language: str, device_id: str) -> dict:
+    consent = create_consent(terms_version=terms_version, language=language)
     return sb_insert(
         "exam_sessions",
         {
@@ -119,6 +128,61 @@ def create_guest_session(*, terms_version: str, language: str, device_id: str) -
             "status": "active",
         },
     )
+
+
+def _get_session_by_pin(session_pin: str) -> dict | None:
+    response = _request(
+        "GET",
+        "exam_sessions",
+        params={
+            "session_pin": f"eq.{session_pin}",
+            "select": "id,patient_id,session_pin,status,mode",
+            "order": "created_at.desc",
+            "limit": 1,
+        },
+    )
+    data = response.json()
+    return data[0] if data else None
+
+
+def activate_pending_session(
+    *,
+    session_pin: str,
+    terms_version: str,
+    language: str,
+    device_id: str,
+) -> dict:
+    session_row = _get_session_by_pin(session_pin)
+    if not session_row:
+        raise SupabaseServiceError(PIN_NOT_FOUND_MESSAGE)
+
+    status = str(session_row.get("status") or "").strip().lower()
+    if status == "active":
+        raise SupabaseServiceError(PIN_ALREADY_ACTIVE_MESSAGE)
+    if status != "pending":
+        raise SupabaseServiceError(PIN_INVALID_STATUS_MESSAGE)
+
+    consent = create_consent(terms_version=terms_version, language=language)
+    response = _request(
+        "PATCH",
+        "exam_sessions",
+        json_payload={
+            "device_id": device_id,
+            "consent_id": consent["id"],
+            "status": "active",
+        },
+        params={
+            "id": f"eq.{session_row['id']}",
+            "select": "id,patient_id,session_pin,status,mode",
+        },
+    )
+    data = response.json()
+    updated_row = data[0] if isinstance(data, list) and data else None
+    if not updated_row:
+        raise SupabaseServiceError("Session activation failed in Supabase.")
+
+    updated_row["consent_id"] = consent["id"]
+    return updated_row
 
 
 def save_guest_profile(*, session_id, sex: str, age: int) -> dict:

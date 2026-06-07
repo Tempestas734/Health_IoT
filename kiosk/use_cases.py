@@ -12,6 +12,22 @@ def start_guest_screening(repository, *, terms_version: str, language: str, devi
     )
 
 
+def activate_patient_screening(
+    repository,
+    *,
+    session_pin: str,
+    terms_version: str,
+    language: str,
+    device_id: str,
+) -> dict:
+    return repository.activate_pending_session(
+        session_pin=session_pin,
+        terms_version=terms_version,
+        language=language,
+        device_id=device_id,
+    )
+
+
 def persist_guest_profile(repository, *, session_id: str, profile: dict) -> None:
     repository.save_guest_profile(session_id=session_id, **profile)
 

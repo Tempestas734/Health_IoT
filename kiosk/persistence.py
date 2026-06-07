@@ -7,6 +7,14 @@ from . import supabase
 
 class ScreeningRepository(Protocol):
     def create_guest_session(self, *, terms_version: str, language: str, device_id: str) -> dict: ...
+    def activate_pending_session(
+        self,
+        *,
+        session_pin: str,
+        terms_version: str,
+        language: str,
+        device_id: str,
+    ) -> dict: ...
     def save_guest_profile(self, *, session_id: str, sex: str, age: int) -> dict: ...
     def save_measurements(self, *, session_id: str, height_cm: float, weight_kg: float, spo2=None) -> list[dict]: ...
     def save_blood_pressure(self, *, session_id: str, systolic_bp: int, diastolic_bp: int) -> list[dict]: ...
@@ -28,6 +36,21 @@ class ScreeningRepository(Protocol):
 class SupabaseScreeningRepository:
     def create_guest_session(self, *, terms_version: str, language: str, device_id: str) -> dict:
         return supabase.create_guest_session(
+            terms_version=terms_version,
+            language=language,
+            device_id=device_id,
+        )
+
+    def activate_pending_session(
+        self,
+        *,
+        session_pin: str,
+        terms_version: str,
+        language: str,
+        device_id: str,
+    ) -> dict:
+        return supabase.activate_pending_session(
+            session_pin=session_pin,
             terms_version=terms_version,
             language=language,
             device_id=device_id,

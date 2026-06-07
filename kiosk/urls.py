@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # UI pages
     path("", views.kiosk_home, name="home"),
+    path("session-activation", views.kiosk_session_activation, name="session_activation"),
     path("consent", views.kiosk_consent, name="consent"),
     path("guest", views.kiosk_guest, name="guest"),
     path("measure", views.kiosk_measure, name="measure"),
@@ -16,6 +17,7 @@ urlpatterns = [
     path("professional/<str:session_pin>", views.professional_result, name="professional_result"),
 
     # API
+    path("api/session-activation/start-session", views.start_pin_session, name="api_start_pin_session"),
     path("api/consent/start-session", views.start_session, name="api_start_session"),
     path("api/guest/profile", views.save_guest_profile, name="api_save_guest_profile"),
     path("api/measurements/height", views.height_capture, name="api_height_capture"),

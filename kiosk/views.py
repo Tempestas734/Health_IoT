@@ -24,6 +24,7 @@ from .forms import (
     ConsentForm,
     GuestForm,
     MeasurementForm,
+    SessionActivationForm,
     SymptomForm,
     VitalsForm,
 )
@@ -40,6 +41,7 @@ from .services.session_pin import (
     publish_session_snapshot,
 )
 from .use_cases import (
+    activate_patient_screening,
     finalize_screening,
     persist_blood_pressure,
     persist_guest_profile,
@@ -162,6 +164,59 @@ def _publish_professional_snapshot(session) -> None:
 
 def home(request):
     return render(request, "kiosk/home.html")
+
+
+def session_activation(request):
+    form = SessionActivationForm(
+        initial={
+            "terms_version": "v1",
+            "language": "fr",
+            "device_id": "DEV-PI-001",
+        }
+    )
+    if request.method != "POST":
+        return render(request, "kiosk/session_activation.html", {"form": form})
+
+    form = SessionActivationForm(_request_data(request))
+    if not form.is_valid():
+        return _form_error_response(request, form, "kiosk/session_activation.html")
+
+    try:
+        activated_session = activate_patient_screening(
+            _repository(),
+            session_pin=form.cleaned_data["session_pin"],
+            terms_version=form.cleaned_data["terms_version"],
+            language=form.cleaned_data["language"],
+            device_id=form.cleaned_data["device_id"],
+        )
+    except SupabaseServiceError as exc:
+        return _service_error_response(
+            request,
+            "kiosk/session_activation.html",
+            str(exc),
+            context={"form": form},
+        )
+
+    begin_session(request.session, str(activated_session["id"]))
+    request.session[PIN_SESSION_KEY] = form.cleaned_data["session_pin"]
+    if activated_session.get("patient_id"):
+        request.session["patient_id"] = str(activated_session["patient_id"])
+    request.session["consent_id"] = str(activated_session["consent_id"])
+    request.session["session_mode"] = str(activated_session.get("mode") or "patient")
+    _publish_professional_snapshot(request.session)
+
+    if _expects_json(request):
+        return JsonResponse(
+            {
+                "session_id": activated_session["id"],
+                "patient_id": activated_session.get("patient_id"),
+                "session_pin": request.session[PIN_SESSION_KEY],
+                "message": "Patient session activated.",
+                "next_path": "/guest",
+            },
+            status=201,
+        )
+    return redirect("/guest")
 
 
 def consent(request):
@@ -503,6 +558,12 @@ def start_session(request):
 
 @csrf_exempt
 @require_POST
+def start_pin_session(request):
+    return session_activation(request)
+
+
+@csrf_exempt
+@require_POST
 def save_guest_profile(request):
     return guest(request)
 
@@ -532,6 +593,7 @@ def submit_symptoms(request):
 
 
 kiosk_home = home
+kiosk_session_activation = session_activation
 kiosk_consent = consent
 kiosk_guest = guest
 kiosk_measure = measure

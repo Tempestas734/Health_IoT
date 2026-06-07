@@ -48,6 +48,47 @@ class ConsentForm(forms.Form):
         return cleaned_data
 
 
+class SessionActivationForm(forms.Form):
+    session_pin = forms.RegexField(
+        regex=r"^\d{6}$",
+        min_length=6,
+        max_length=6,
+        error_messages={
+            "required": "Enter a 6-digit session PIN.",
+            "invalid": "Enter a valid 6-digit session PIN.",
+            "min_length": "Enter a valid 6-digit session PIN.",
+            "max_length": "Enter a valid 6-digit session PIN.",
+        },
+    )
+    agree = forms.BooleanField(required=False)
+    terms_version = forms.CharField(required=False, max_length=20, initial="v1")
+    language = forms.CharField(required=False, max_length=10, initial="fr")
+    device_id = forms.CharField(required=False, max_length=100, initial="UNKNOWN")
+
+    def clean_session_pin(self) -> str:
+        return str(self.cleaned_data["session_pin"]).strip()
+
+    def clean_terms_version(self) -> str:
+        value = (self.cleaned_data.get("terms_version") or "v1").strip()
+        return value or "v1"
+
+    def clean_language(self) -> str:
+        value = (self.cleaned_data.get("language") or "fr").strip().lower()
+        return value or "fr"
+
+    def clean_device_id(self) -> str:
+        value = (self.cleaned_data.get("device_id") or "UNKNOWN").strip()
+        return value or "UNKNOWN"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if "agree" not in self.data and self.is_bound:
+            cleaned_data["agree"] = True
+        elif not cleaned_data.get("agree"):
+            self.add_error("agree", "You must accept the consent terms to continue.")
+        return cleaned_data
+
+
 class GuestForm(forms.Form):
     SEX_CHOICES = (
         ("male", "Male"),
