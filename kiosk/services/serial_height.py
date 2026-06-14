@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import unicodedata
 from threading import Lock
 from typing import Any
 
@@ -17,23 +18,23 @@ except ImportError:  # pragma: no cover - exercised via runtime environment
         pass
 
 
-DISTANCE_PATTERN = re.compile(r"DISTANCE\s*:\s*(\d+)", re.IGNORECASE)
+DISTANCE_PATTERN = re.compile(r"DISTANCE\s*[:=]\s*(\d+)", re.IGNORECASE)
 RECEIVED_DISTANCE_MM_PATTERN = re.compile(
-    r"Received\s+distance\s*:\s*(\d+)\s*mm",
+    r"Received\s+distance\s*[:=]\s*(\d+)\s*mm",
     re.IGNORECASE,
 )
-FRENCH_DISTANCE_TOKEN = r"mesur(?:ee|e|ee|\u00e9e)"
-FRENCH_HEIGHT_TOKEN = r"estim(?:ee|e|ee|\u00e9e)"
+FRENCH_DISTANCE_TOKEN = r"mesur(?:ee|e)"
+FRENCH_HEIGHT_TOKEN = r"estim(?:ee|e)"
 FRENCH_DISTANCE_CM_PATTERN = re.compile(
-    rf"Distance\s+{FRENCH_DISTANCE_TOKEN}\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm",
+    rf"Distance\s+{FRENCH_DISTANCE_TOKEN}\s*[:=]\s*([0-9]+(?:[.,][0-9]+)?)\s*cm",
     re.IGNORECASE,
 )
 FRENCH_DISTANCE_AND_HEIGHT_PATTERN = re.compile(
-    rf"Distance\s+{FRENCH_DISTANCE_TOKEN}\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*\|\s*Taille\s+{FRENCH_HEIGHT_TOKEN}\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm",
+    rf"Distance\s+{FRENCH_DISTANCE_TOKEN}\s*[:=]\s*([0-9]+(?:[.,][0-9]+)?)\s*cm(?:\s*[|;,-]\s*|\s+)Taille\s+{FRENCH_HEIGHT_TOKEN}\s*[:=]\s*([0-9]+(?:[.,][0-9]+)?)\s*cm",
     re.IGNORECASE,
 )
 HEIGHT_CM_PATTERN = re.compile(
-    r"HEIGHT_CM\s*[=:]\s*([0-9]+(?:\.[0-9]+)?)",
+    r"HEIGHT_CM\s*[=:]\s*([0-9]+(?:[.,][0-9]+)?)",
     re.IGNORECASE,
 )
 ERROR_PATTERN = re.compile(r"DISTANCE_ERROR|erreur|error|timeout", re.IGNORECASE)
@@ -46,6 +47,12 @@ MAX_VALID_HEIGHT_MM = 2200
 _height_filter = MovingAverageFilter(window_size=5)
 _last_distance_mm: int | None = None
 _lock = Lock()
+
+
+def _normalize_serial_line(line: str) -> str:
+    normalized = unicodedata.normalize("NFKD", line or "")
+    ascii_line = normalized.encode("ascii", "ignore").decode("ascii")
+    return ascii_line.replace(",", ".").strip()
 
 
 def _serial_port() -> str:
@@ -94,7 +101,7 @@ def _outlier_threshold_mm() -> int:
 
 
 def parse_height_measurement(line: str) -> tuple[float | None, float | None]:
-    normalized = (line or "").strip()
+    normalized = _normalize_serial_line(line)
     if not normalized:
         return None, None
 
@@ -113,7 +120,7 @@ def parse_height_measurement(line: str) -> tuple[float | None, float | None]:
 
 
 def parse_height_line(line: str) -> float | None:
-    normalized = (line or "").strip()
+    normalized = _normalize_serial_line(line)
     if not normalized:
         return None
 
@@ -161,6 +168,7 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
     sensor_height_mm = _sensor_height_mm()
     outlier_threshold_mm = _outlier_threshold_mm()
     last_error_line = ""
+    last_observed_line = ""
 
     if serial is None:
         return {
@@ -183,6 +191,8 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
                 decoded_line = raw_line.decode("utf-8", errors="ignore").strip()
                 if not decoded_line:
                     continue
+
+                last_observed_line = decoded_line
 
                 if ERROR_PATTERN.search(decoded_line):
                     last_error_line = decoded_line
@@ -277,6 +287,6 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
         "height_mm": None,
         "height_cm": None,
         "distance_mm": None,
-        "source_line": "",
+        "source_line": last_observed_line,
         "port": port,
     }

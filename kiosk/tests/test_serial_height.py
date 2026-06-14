@@ -48,6 +48,12 @@ class ParseHeightLineTests(SimpleTestCase):
             (523.0, 1477.0),
         )
 
+    def test_parses_french_measurement_with_equals_semicolon_and_comma_decimals(self):
+        self.assertEqual(
+            parse_height_measurement("Distance mesuree = 52,3 cm ; Taille estimee = 147,7 cm"),
+            (523.0, 1477.0),
+        )
+
     def test_parses_accented_french_distance_and_direct_height_measurement(self):
         self.assertEqual(
             parse_height_measurement(
@@ -59,6 +65,12 @@ class ParseHeightLineTests(SimpleTestCase):
     def test_parses_direct_height_line(self):
         self.assertEqual(
             parse_height_measurement("HEIGHT_CM=171.4"),
+            (None, 1714.0),
+        )
+
+    def test_parses_direct_height_line_with_comma_decimal(self):
+        self.assertEqual(
+            parse_height_measurement("HEIGHT_CM=171,4"),
             (None, 1714.0),
         )
 
@@ -126,3 +138,28 @@ class ParseHeightLineTests(SimpleTestCase):
         self.assertEqual(payload["status"], "error")
         self.assertEqual(payload["source_line"], "erreur capteur")
         self.assertIsNone(payload["height_mm"])
+
+    def test_read_height_measurement_returns_last_observed_line_when_waiting(self):
+        class FakeSerial:
+            def __init__(self, *_args, **_kwargs):
+                self._lines = iter(
+                    [
+                        b"boot complete\r\n",
+                        b"capteur pret\r\n",
+                    ]
+                )
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def readline(self):
+                return next(self._lines, b"")
+
+        with patch.object(serial_height, "serial", SimpleNamespace(Serial=FakeSerial)):
+            payload = read_height_measurement(max_lines=3)
+
+        self.assertEqual(payload["status"], "waiting")
+        self.assertEqual(payload["source_line"], "capteur pret")
