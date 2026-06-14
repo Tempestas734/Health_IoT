@@ -195,6 +195,10 @@ function updateHeightMeasurement(heightCm, distanceMm = null) {
   renderSensorState();
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function applyArduinoLine(line) {
   const normalizedLine = String(line || "").trim();
   if (!normalizedLine) {
@@ -235,41 +239,48 @@ async function fetchHeightMeasurement() {
   const button = document.getElementById("height_sensor_button");
   button.disabled = true;
   button.textContent = "Lecture en cours...";
+  sensorState.status = "waiting";
+  sensorState.message = "Recherche d'une lecture valide...";
+  renderSensorState();
   try {
-    const response = await fetch("/api/height/", {
-      headers: { "Accept": "application/json" },
-      cache: "no-store",
-    });
+    let lastPayload = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const response = await fetch("/api/height/", {
+        headers: { "Accept": "application/json" },
+        cache: "no-store",
+      });
 
-    if (!response.ok) {
-      sensorState.status = "error";
-      sensorState.message = "Unable to read height sensor.";
-      renderSensorState();
-      return;
+      if (!response.ok) {
+        sensorState.status = "error";
+        sensorState.message = "Unable to read height sensor.";
+        renderSensorState();
+        return;
+      }
+
+      const payload = await response.json();
+      lastPayload = payload;
+      const heightCm = Number(payload.height_cm);
+      const heightMm = Number(payload.height_mm);
+
+      if (payload.status === "ok" && (Number.isFinite(heightCm) || Number.isFinite(heightMm))) {
+        sensorState.message = payload.message || "Height updated from USB sensor.";
+        updateHeightMeasurement(
+          Number.isFinite(heightCm) ? heightCm : heightMm / 10,
+          payload.distance_mm
+        );
+        return;
+      }
+
+      if (attempt < 3) {
+        sensorState.status = "waiting";
+        sensorState.message = payload.message || "Nouvelle tentative de lecture...";
+        renderSensorState();
+        await delay(350);
+      }
     }
 
-    const payload = await response.json();
-    const heightCm = Number(payload.height_cm);
-    const heightMm = Number(payload.height_mm);
-
-    if (payload.status === "ok" && (Number.isFinite(heightCm) || Number.isFinite(heightMm))) {
-      sensorState.message = payload.message || "Height updated from USB sensor.";
-      updateHeightMeasurement(
-        Number.isFinite(heightCm) ? heightCm : heightMm / 10,
-        payload.distance_mm
-      );
-      return;
-    }
-
-    if (payload.status === "error") {
-      sensorState.status = "error";
-      sensorState.message = payload.message || "Check sensor connection.";
-      renderSensorState();
-      return;
-    }
-
-    sensorState.status = "waiting";
-    sensorState.message = payload.message || "Waiting for USB reading.";
+    sensorState.status = lastPayload?.status === "error" ? "error" : "waiting";
+    sensorState.message = lastPayload?.message || "Waiting for USB reading.";
     renderSensorState();
   } catch (_) {
     sensorState.status = "error";
