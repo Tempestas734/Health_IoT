@@ -212,6 +212,12 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function describeHeightPayload(payload, fallbackMessage) {
+  const baseMessage = payload?.message || fallbackMessage;
+  const sourceLine = String(payload?.source_line || "").trim();
+  return sourceLine ? `${baseMessage} (${sourceLine})` : baseMessage;
+}
+
 async function fetchHeightMeasurement() {
   const button = document.getElementById("height_sensor_button");
   button.disabled = true;
@@ -240,7 +246,7 @@ async function fetchHeightMeasurement() {
       const heightMm = Number(payload.height_mm);
 
       if (payload.status === "ok" && (Number.isFinite(heightCm) || Number.isFinite(heightMm))) {
-        sensorState.message = payload.message || "Height updated from USB sensor.";
+        sensorState.message = describeHeightPayload(payload, "Height updated from USB sensor.");
         updateHeightMeasurement(
           Number.isFinite(heightCm) ? heightCm : heightMm / 10,
           payload.distance_mm
@@ -250,14 +256,14 @@ async function fetchHeightMeasurement() {
 
       if (attempt < 3) {
         sensorState.status = "waiting";
-        sensorState.message = payload.message || "Nouvelle tentative de lecture...";
+        sensorState.message = describeHeightPayload(payload, "Nouvelle tentative de lecture...");
         renderSensorState();
         await delay(350);
       }
     }
 
     sensorState.status = lastPayload?.status === "error" ? "error" : "waiting";
-    sensorState.message = lastPayload?.message || "Waiting for USB reading.";
+    sensorState.message = describeHeightPayload(lastPayload, "Waiting for USB reading.");
     renderSensorState();
   } catch (_) {
     sensorState.status = "error";
