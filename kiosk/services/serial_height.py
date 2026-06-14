@@ -160,6 +160,7 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
     port = _serial_port()
     sensor_height_mm = _sensor_height_mm()
     outlier_threshold_mm = _outlier_threshold_mm()
+    last_error_line = ""
 
     if serial is None:
         return {
@@ -181,6 +182,10 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
 
                 decoded_line = raw_line.decode("utf-8", errors="ignore").strip()
                 if not decoded_line:
+                    continue
+
+                if ERROR_PATTERN.search(decoded_line):
+                    last_error_line = decoded_line
                     continue
 
                 distance_mm, direct_height_mm = parse_height_measurement(decoded_line)
@@ -244,17 +249,6 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
                         "port": port,
                     }
 
-                if ERROR_PATTERN.search(decoded_line):
-                    return {
-                        "status": "error",
-                        "message": "Arduino non connecte ou capteur en erreur.",
-                        "height_mm": None,
-                        "height_cm": None,
-                        "distance_mm": None,
-                        "source_line": decoded_line,
-                        "port": port,
-                    }
-
     except (OSError, SerialException) as exc:
         return {
             "status": "error",
@@ -263,6 +257,17 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
             "height_cm": None,
             "distance_mm": None,
             "source_line": "",
+            "port": port,
+        }
+
+    if last_error_line:
+        return {
+            "status": "error",
+            "message": "Arduino non connecte ou capteur en erreur.",
+            "height_mm": None,
+            "height_cm": None,
+            "distance_mm": None,
+            "source_line": last_error_line,
             "port": port,
         }
 

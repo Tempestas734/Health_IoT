@@ -1,13 +1,23 @@
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from django.test import SimpleTestCase
 
+from kiosk.services import serial_height
 from kiosk.services.serial_height import (
     distance_to_height_mm,
     parse_height_line,
     parse_height_measurement,
+    read_height_measurement,
 )
 
 
 class ParseHeightLineTests(SimpleTestCase):
+    def tearDown(self):
+        serial_height._height_filter.clear()
+        serial_height._last_distance_mm = None
+        super().tearDown()
+
     def test_parses_distance_line(self):
         self.assertEqual(parse_height_line("DISTANCE:523"), 523.0)
 
@@ -60,3 +70,59 @@ class ParseHeightLineTests(SimpleTestCase):
 
     def test_returns_none_for_height_outside_valid_range(self):
         self.assertIsNone(distance_to_height_mm(1501, sensor_height_mm=2000))
+
+    def test_read_height_measurement_skips_transient_error_until_valid_height(self):
+        class FakeSerial:
+            def __init__(self, *_args, **_kwargs):
+                self._lines = iter(
+                    [
+                        b"erreur capteur\r\n",
+                        b"Distance mesuree: 52.3 cm | Taille estimee: 147.7 cm\r\n",
+                    ]
+                )
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def readline(self):
+                return next(self._lines, b"")
+
+        with patch.object(serial_height, "serial", SimpleNamespace(Serial=FakeSerial)):
+            payload = read_height_measurement(max_lines=3)
+
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["height_mm"], 1477)
+        self.assertEqual(payload["distance_mm"], 523)
+        self.assertEqual(
+            payload["source_line"],
+            "Distance mesuree: 52.3 cm | Taille estimee: 147.7 cm",
+        )
+
+    def test_read_height_measurement_returns_error_if_only_transient_errors_seen(self):
+        class FakeSerial:
+            def __init__(self, *_args, **_kwargs):
+                self._lines = iter(
+                    [
+                        b"timeout\r\n",
+                        b"erreur capteur\r\n",
+                    ]
+                )
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def readline(self):
+                return next(self._lines, b"")
+
+        with patch.object(serial_height, "serial", SimpleNamespace(Serial=FakeSerial)):
+            payload = read_height_measurement(max_lines=3)
+
+        self.assertEqual(payload["status"], "error")
+        self.assertEqual(payload["source_line"], "erreur capteur")
+        self.assertIsNone(payload["height_mm"])
