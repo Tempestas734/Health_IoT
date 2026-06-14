@@ -38,6 +38,10 @@ HEIGHT_CM_PATTERN = re.compile(
     re.IGNORECASE,
 )
 ERROR_PATTERN = re.compile(r"DISTANCE_ERROR|erreur|error|timeout", re.IGNORECASE)
+INFO_PATTERN = re.compile(
+    r"detecte|detected|pret|ready|boot|initiali[sz]|connecte|connected",
+    re.IGNORECASE,
+)
 DEFAULT_OUTLIER_THRESHOLD_MM = 500
 DEFAULT_SENSOR_HEIGHT_MM = 2000
 DEFAULT_CALIBRATION_MM = 0
@@ -161,7 +165,7 @@ def distance_to_height_mm(
     return estimated_height
 
 
-def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
+def read_height_measurement(*, max_lines: int = 12) -> dict[str, Any]:
     global _last_distance_mm
 
     port = _serial_port()
@@ -196,6 +200,9 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
 
                 if ERROR_PATTERN.search(decoded_line):
                     last_error_line = decoded_line
+                    continue
+
+                if INFO_PATTERN.search(_normalize_serial_line(decoded_line)):
                     continue
 
                 distance_mm, direct_height_mm = parse_height_measurement(decoded_line)

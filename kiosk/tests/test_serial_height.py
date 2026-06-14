@@ -163,3 +163,29 @@ class ParseHeightLineTests(SimpleTestCase):
 
         self.assertEqual(payload["status"], "waiting")
         self.assertEqual(payload["source_line"], "capteur pret")
+
+    def test_read_height_measurement_skips_info_lines_until_valid_height(self):
+        class FakeSerial:
+            def __init__(self, *_args, **_kwargs):
+                self._lines = iter(
+                    [
+                        b"VL53L1X detecte\r\n",
+                        b"capteur pret\r\n",
+                        b"Distance mesuree: 52.3 cm | Taille estimee: 147.7 cm\r\n",
+                    ]
+                )
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def readline(self):
+                return next(self._lines, b"")
+
+        with patch.object(serial_height, "serial", SimpleNamespace(Serial=FakeSerial)):
+            payload = read_height_measurement(max_lines=5)
+
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["height_cm"], 147.7)
