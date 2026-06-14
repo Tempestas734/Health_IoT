@@ -22,8 +22,14 @@ RECEIVED_DISTANCE_MM_PATTERN = re.compile(
     r"Received\s+distance\s*:\s*(\d+)\s*mm",
     re.IGNORECASE,
 )
+FRENCH_DISTANCE_TOKEN = r"mesur(?:ee|e|ee|\u00e9e)"
+FRENCH_HEIGHT_TOKEN = r"estim(?:ee|e|ee|\u00e9e)"
 FRENCH_DISTANCE_CM_PATTERN = re.compile(
-    r"Distance\s+mesur(?:ee|e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm",
+    rf"Distance\s+{FRENCH_DISTANCE_TOKEN}\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm",
+    re.IGNORECASE,
+)
+FRENCH_DISTANCE_AND_HEIGHT_PATTERN = re.compile(
+    rf"Distance\s+{FRENCH_DISTANCE_TOKEN}\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*\|\s*Taille\s+{FRENCH_HEIGHT_TOKEN}\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm",
     re.IGNORECASE,
 )
 HEIGHT_CM_PATTERN = re.compile(
@@ -77,9 +83,33 @@ def _calibration_mm() -> int:
 
 def _outlier_threshold_mm() -> int:
     try:
-        return int(os.getenv("HEIGHT_SENSOR_OUTLIER_THRESHOLD_MM", str(DEFAULT_OUTLIER_THRESHOLD_MM)))
+        return int(
+            os.getenv(
+                "HEIGHT_SENSOR_OUTLIER_THRESHOLD_MM",
+                str(DEFAULT_OUTLIER_THRESHOLD_MM),
+            )
+        )
     except ValueError:
         return DEFAULT_OUTLIER_THRESHOLD_MM
+
+
+def parse_height_measurement(line: str) -> tuple[float | None, float | None]:
+    normalized = (line or "").strip()
+    if not normalized:
+        return None, None
+
+    french_measurement_match = FRENCH_DISTANCE_AND_HEIGHT_PATTERN.search(normalized)
+    if french_measurement_match:
+        return (
+            float(french_measurement_match.group(1)) * 10.0,
+            float(french_measurement_match.group(2)) * 10.0,
+        )
+
+    height_match = HEIGHT_CM_PATTERN.search(normalized)
+    if height_match:
+        return None, float(height_match.group(1)) * 10.0
+
+    return parse_height_line(normalized), None
 
 
 def parse_height_line(line: str) -> float | None:
@@ -107,7 +137,11 @@ def parse_height_line(line: str) -> float | None:
     return None
 
 
-def distance_to_height_mm(distance_mm: float | int, *, sensor_height_mm: int | None = None) -> int | None:
+def distance_to_height_mm(
+    distance_mm: float | int,
+    *,
+    sensor_height_mm: int | None = None,
+) -> int | None:
     try:
         measured_distance = int(round(float(distance_mm)))
     except (TypeError, ValueError):
@@ -149,11 +183,14 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
                 if not decoded_line:
                     continue
 
-                distance_mm = parse_height_line(decoded_line)
-                if distance_mm is not None:
+                distance_mm, direct_height_mm = parse_height_measurement(decoded_line)
+                if distance_mm is not None or direct_height_mm is not None:
                     with _lock:
-                        rounded_distance = int(round(distance_mm))
-                        if is_outlier(rounded_distance, _last_distance_mm, outlier_threshold_mm):
+                        rounded_distance = int(round(distance_mm)) if distance_mm is not None else None
+                        if (
+                            rounded_distance is not None
+                            and is_outlier(rounded_distance, _last_distance_mm, outlier_threshold_mm)
+                        ):
                             fallback_height_mm = distance_to_height_mm(
                                 _last_distance_mm,
                                 sensor_height_mm=sensor_height_mm,
@@ -172,17 +209,24 @@ def read_height_measurement(*, max_lines: int = 5) -> dict[str, Any]:
                                 "port": port,
                             }
 
-                        _last_distance_mm = rounded_distance
-                        filtered_distance = int(round(_height_filter.add(rounded_distance)))
-                        estimated_height_mm = distance_to_height_mm(
-                            filtered_distance,
-                            sensor_height_mm=sensor_height_mm,
+                        filtered_distance = None
+                        if rounded_distance is not None:
+                            _last_distance_mm = rounded_distance
+                            filtered_distance = int(round(_height_filter.add(rounded_distance)))
+
+                        estimated_height_mm = (
+                            int(round(direct_height_mm))
+                            if direct_height_mm is not None
+                            else distance_to_height_mm(
+                                filtered_distance,
+                                sensor_height_mm=sensor_height_mm,
+                            )
                         )
 
                     if estimated_height_mm is None:
                         return {
                             "status": "error",
-                            "message": "Distance invalide pour une hauteur de capteur a 2 m.",
+                            "message": "Distance invalide pour la configuration actuelle du capteur.",
                             "height_mm": None,
                             "height_cm": None,
                             "distance_mm": filtered_distance,

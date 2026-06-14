@@ -201,14 +201,7 @@ function applyArduinoLine(line) {
     return;
   }
 
-  const serialDistanceMatch = normalizedLine.match(/Received distance\s*:\s*(\d+)\s*mm/i);
-  if (serialDistanceMatch) {
-    const distanceMm = Number(serialDistanceMatch[1]);
-    updateHeightMeasurement(distanceMm / 10, distanceMm);
-    return;
-  }
-
-  const frenchMeasurementMatch = normalizedLine.match(/Distance\s+mesur(?:ee|e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*\|\s*Taille\s+estim(?:ee|e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm/i);
+  const frenchMeasurementMatch = normalizedLine.match(/Distance\s+mesur(?:ee|e|\u00e9e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*\|\s*Taille\s+estim(?:ee|e|\u00e9e)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*cm/i);
   if (frenchMeasurementMatch) {
     const distanceMm = Number(frenchMeasurementMatch[1]) * 10;
     const heightCm = Number(frenchMeasurementMatch[2]);
@@ -219,6 +212,15 @@ function applyArduinoLine(line) {
   const heightMatch = normalizedLine.match(/HEIGHT_CM\s*[=:]\s*([0-9]+(?:\.[0-9]+)?)/i);
   if (heightMatch) {
     updateHeightMeasurement(Number(heightMatch[1]), null);
+    return;
+  }
+
+  const distanceOnlyMatch = normalizedLine.match(/(?:Received\s+distance|DISTANCE)\s*[:=]\s*(\d+)(?:\s*mm)?/i);
+  if (distanceOnlyMatch) {
+    sensorState.status = "waiting";
+    sensorState.message = "Distance recue, attente d'une hauteur calculee valide.";
+    document.getElementById("distance_value").textContent = String(Math.round(Number(distanceOnlyMatch[1])));
+    renderSensorState();
     return;
   }
 
